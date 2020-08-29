@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 // mod ext;
-// mod api;
+mod api;
 mod settings;
-// mod state;
+mod state;
 // mod schema;
 // mod models;
 
@@ -12,14 +12,18 @@ mod settings;
 // #[macro_use]
 // extern crate validator_derive;
 
-// use actix_web::{middleware, App, HttpServer, HttpResponse, web};
-// use ext::actix_web::HttpResponseExt;
+#[macro_use]
+extern crate diesel_migrations;
+embed_migrations!();
+
+use actix_web::{middleware, App, HttpServer, HttpResponse, web};
 use settings::Settings;
-// use state::AppState;
+use state::AppState;
 use std::error::Error;
 use std::env;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+
 
 fn parse_cli() -> clap::ArgMatches<'static> {
 	clap::App::new(env!("CARGO_PKG_NAME"))
@@ -34,32 +38,30 @@ fn parse_cli() -> clap::ArgMatches<'static> {
 		).get_matches()
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-
+#[actix_rt::main]
+async fn main() -> Result<(), Box<dyn Error>> {
 	let matches = parse_cli();
-	if cfg!(debug_assertions) {println!("THIS IS A DEBUG BUILD")};
+	if cfg!(debug_assertions) { println!("THIS IS A DEBUG BUILD") };
 	let settings = Settings::new(matches.value_of("config"))?;
 
-	let level = if cfg!(debug_assertions) {"info"} else {"error"};
+	let level = if cfg!(debug_assertions) { "info" } else { "error" };
 	env::set_var("RUST_LOG", format!("actix_web={}", level));
 	env_logger::init();
 
 	let manager = ConnectionManager::<PgConnection>::new(settings.database.connection_url());
 	let pool = r2d2::Pool::builder().build(manager)?;
-	//
-	// //Create the application state
-	// let state = AppState::new(settings, pool);
-	//
-	// //Start the HTTP Server
-	// let address = format!("127.0.0.1:{}", state.settings.app.port);
-	// println!("Starting server on: http://{}", address);
-	// HttpServer::new(move || {
-	// 	App::new()
-	// 		.data(state.clone())
-	// 		.wrap(middleware::Logger::default())
-	// 		.configure(api::configure)
-	// 		.service(web::resource("/").route(web::get().to(|| HttpResponse::found_to("app"))))
-	// }).bind(address)?.run()?;
+	let state = AppState::new(settings, pool);
+
+	embedded_migrations::run_with_output(&state.new_connection(), &mut std::io::stdout())?;
+
+	let address = format!("127.0.0.1:{}", state.settings.app.port);
+	println!("Starting server on: http://{}", address);
+	HttpServer::new(move || {
+		App::new()
+			.data(state.clone())
+			.wrap(middleware::Logger::default())
+			.configure(api::configure)
+	}).bind(address)?.run().await?;
 
 	Ok(())
 }

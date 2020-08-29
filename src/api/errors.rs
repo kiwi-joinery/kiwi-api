@@ -11,22 +11,9 @@ struct APIErrorResponse {
 }
 
 impl APIErrorResponse {
-
-    pub fn code(code: String) -> APIErrorResponse {
-        APIErrorResponse {code: code.to_owned(), description: None}
-    }
-
-    pub fn description(code: String, description: Option<String>) -> APIErrorResponse {
+    pub fn new(code: String, description: Option<String>) -> APIErrorResponse {
         APIErrorResponse {code, description}
     }
-
-    //Internal server errors are only shown when debug is enabled, for security reasons
-    pub fn internal(source: String, cause: String) -> APIErrorResponse {
-        let description = format!("{}: {}", source, cause);
-        let hidden = if cfg!(debug_assertions) {Some(description)} else {None};
-        APIErrorResponse {code: "INTERNAL_SERVER_ERROR".to_owned(), description: hidden}
-    }
-
 }
 
 #[derive(Debug)]
@@ -42,7 +29,6 @@ pub enum APIError {
     Forbidden,
     NotFound,
     MethodNotAllowed,
-    UnderlyingError(String, failure::Error),
     InternalError(String),
     NotImplemented,
 }
@@ -60,7 +46,6 @@ impl APIError {
             APIError::Forbidden => StatusCode::FORBIDDEN,
             APIError::NotFound => StatusCode::NOT_FOUND,
             APIError::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
-            APIError::UnderlyingError(_,_) => StatusCode::INTERNAL_SERVER_ERROR,
             APIError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             APIError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
         }
@@ -69,17 +54,20 @@ impl APIError {
     //Create an APIErrorResponse from an APIError
     fn transform(&self) -> APIErrorResponse {
         match self {
-            APIError::BadRequest {code, description} => APIErrorResponse::description(code.to_owned(), description.to_owned()),
-            APIError::BadAgent => APIErrorResponse::description("BAD_AGENT".to_owned(), None),
-            APIError::ValidationError(s) => APIErrorResponse::description("VALIDATION_ERROR".to_owned(), Some(s.to_owned())),
-            APIError::MissingCredentials => APIErrorResponse::code("MISSING_CREDENTIALS".to_owned()),
-            APIError::IncorrectCredentials => APIErrorResponse::code("INCORRECT_CREDENTIALS".to_owned()),
-            APIError::Forbidden => APIErrorResponse::code("FORBIDDEN".to_owned()),
-            APIError::NotFound => APIErrorResponse::code("NOT_FOUND".to_owned()),
-            APIError::MethodNotAllowed => APIErrorResponse::code("METHOD_NOT_ALLOWED".to_owned()),
-            APIError::UnderlyingError(s, e) => APIErrorResponse::internal(s.to_owned(), e.to_string()),
-            APIError::InternalError(e) => APIErrorResponse::internal("App".to_owned(), e.to_owned()),
-            APIError::NotImplemented => APIErrorResponse::code("NOT_IMPLEMENTED".to_owned()),
+            APIError::BadRequest {code, description} => APIErrorResponse::new(code.to_owned(), description.to_owned()),
+            APIError::BadAgent => APIErrorResponse::new("BAD_AGENT".to_owned(), None),
+            APIError::ValidationError(s) => APIErrorResponse::new("VALIDATION_ERROR".to_owned(), Some(s.to_owned())),
+            APIError::MissingCredentials => APIErrorResponse::new("MISSING_CREDENTIALS".to_owned(), None),
+            APIError::IncorrectCredentials => APIErrorResponse::new("INCORRECT_CREDENTIALS".to_owned(), None),
+            APIError::Forbidden => APIErrorResponse::new("FORBIDDEN".to_owned(), None),
+            APIError::NotFound => APIErrorResponse::new("NOT_FOUND".to_owned(), None),
+            APIError::MethodNotAllowed => APIErrorResponse::new("METHOD_NOT_ALLOWED".to_owned(), None),
+            APIError::InternalError(e) => {
+                //Internal server errors are only shown when debug is enabled, for security reasons
+                let hidden = if cfg!(debug_assertions) {Some(e.to_owned())} else {None};
+                APIErrorResponse::new("INTERNAL_SERVER_ERROR".to_owned(), hidden)
+            },
+            APIError::NotImplemented => APIErrorResponse::new("NOT_IMPLEMENTED".to_owned(), None),
         }
     }
 }
@@ -91,16 +79,12 @@ impl std::fmt::Display for APIError {
     }
 }
 
+
 impl ResponseError for APIError {
 
     fn error_response(&self) -> HttpResponse {
-        unimplemented!("Use render_response()")
+        HttpResponse::build(self.status_code()).json(self.transform())
     }
-
-    fn render_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code()).error(self.transform())
-    }
-
 }
 
 //Note that not finding an expected row will be transformed into an APIError::NotFound
@@ -109,7 +93,7 @@ impl From<diesel::result::Error> for APIError {
         use diesel::result::Error;
         match err {
             Error::NotFound => APIError::NotFound,
-            err => APIError::UnderlyingError("Diesel".to_owned(), err.into())
+            err => APIError::InternalError(format!("{}", err))
         }
     }
 }
@@ -124,52 +108,52 @@ impl<T: std::fmt::Debug + Into<APIError>> From<actix_web::error::BlockingError<T
     }
 }
 
-impl From<actix_web::error::UrlencodedError> for APIError {
-    fn from(err: actix_web::error::UrlencodedError) -> Self {
-        APIError::ValidationError(format!("{}", err))
-    }
-}
+// impl From<actix_web::error::UrlencodedError> for APIError {
+//     fn from(err: actix_web::error::UrlencodedError) -> Self {
+//         APIError::ValidationError(format!("{}", err))
+//     }
+// }
 
 impl From<actix_web::error::PathError> for APIError {
     fn from(_err: actix_web::error::PathError) -> Self {
         APIError::NotFound
     }
 }
+//
+// impl From<actix_web::error::QueryPayloadError> for APIError {
+//     fn from(err: actix_web::error::QueryPayloadError) -> Self {
+//         APIError::ValidationError(format!("{}", err))
+//     }
+// }
 
-impl From<actix_web::error::QueryPayloadError> for APIError {
-    fn from(err: actix_web::error::QueryPayloadError) -> Self {
-        APIError::ValidationError(format!("{}", err))
-    }
-}
+// impl From<bcrypt::BcryptError> for APIError {
+//     fn from(err: bcrypt::BcryptError) -> Self {
+//         APIError::UnderlyingError("Bcrypt".to_owned(), err.into())
+//     }
+// }
+//
+// impl From<validator::ValidationErrors> for APIError {
+//     fn from(err: validator::ValidationErrors) -> Self {
+//         APIError::ValidationError(format!("{}", err))
+//     }
+// }
 
-impl From<bcrypt::BcryptError> for APIError {
-    fn from(err: bcrypt::BcryptError) -> Self {
-        APIError::UnderlyingError("Bcrypt".to_owned(), err.into())
-    }
-}
-
-impl From<validator::ValidationErrors> for APIError {
-    fn from(err: validator::ValidationErrors) -> Self {
-        APIError::ValidationError(format!("{}", err))
-    }
-}
-
-impl From<crate::ext::validation::form::ValidatedFormError> for APIError {
-    fn from(e: crate::ext::validation::form::ValidatedFormError) -> Self {
-        use crate::ext::validation::form::ValidatedFormError;
-        match e {
-            ValidatedFormError::Deserialization(u) => {u.into()},
-            ValidatedFormError::Validation(v) => {v.into()}
-        }
-    }
-}
-
-impl From<crate::ext::validation::query::ValidatedQueryError> for APIError {
-    fn from(e: crate::ext::validation::query::ValidatedQueryError) -> Self {
-        use crate::ext::validation::query::ValidatedQueryError;
-        match e {
-            ValidatedQueryError::Deserialization(u) => {u.into()},
-            ValidatedQueryError::Validation(v) => {v.into()}
-        }
-    }
-}
+// impl From<crate::ext::validation::form::ValidatedFormError> for APIError {
+//     fn from(e: crate::ext::validation::form::ValidatedFormError) -> Self {
+//         use crate::ext::validation::form::ValidatedFormError;
+//         match e {
+//             ValidatedFormError::Deserialization(u) => {u.into()},
+//             ValidatedFormError::Validation(v) => {v.into()}
+//         }
+//     }
+// }
+//
+// impl From<crate::ext::validation::query::ValidatedQueryError> for APIError {
+//     fn from(e: crate::ext::validation::query::ValidatedQueryError) -> Self {
+//         use crate::ext::validation::query::ValidatedQueryError;
+//         match e {
+//             ValidatedQueryError::Deserialization(u) => {u.into()},
+//             ValidatedQueryError::Validation(v) => {v.into()}
+//         }
+//     }
+// }
