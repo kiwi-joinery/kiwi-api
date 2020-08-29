@@ -1,0 +1,2 @@
+CREATE SCHEMA lecture_server DEFAULT CHARACTER SET utf8mb4 ;
+
