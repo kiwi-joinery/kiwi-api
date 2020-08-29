@@ -1,5 +1,6 @@
-use config::{ConfigError, Config, Environment};
+use config::{ConfigError, Config, Environment, File, FileFormat};
 use serde::{Deserialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct App {
@@ -24,9 +25,16 @@ pub struct Settings {
 
 impl Settings {
 
-	pub fn new(_file: Option<&str>) -> Result<Self, ConfigError> {
+	pub fn new(file: Option<&str>) -> Result<Self, ConfigError> {
 		let mut s = Config::new();
-		s.merge(Environment::new())?;
+		s.set_default("app.port", 9000);
+		match file {
+			None => {},
+			Some(f) => {
+				s.merge(File::with_name(f).format(FileFormat::Toml))?;
+			},
+		}
+		s.merge(Environment::new());
 		s.try_into()
 	}
 

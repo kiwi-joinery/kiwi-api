@@ -18,8 +18,8 @@ use settings::Settings;
 // use state::AppState;
 use std::error::Error;
 use std::env;
-// use diesel::prelude::*;
-// use diesel::r2d2::{self, ConnectionManager};
+use diesel::prelude::*;
+use diesel::r2d2::{self, ConnectionManager};
 
 fn parse_cli() -> clap::ArgMatches<'static> {
 	clap::App::new(env!("CARGO_PKG_NAME"))
@@ -39,15 +39,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let matches = parse_cli();
 	if cfg!(debug_assertions) {println!("THIS IS A DEBUG BUILD")};
 	let settings = Settings::new(matches.value_of("config"))?;
-	//
-	// //Configure logging
-	// let level = if cfg!(debug_assertions) {"info"} else {"error"};
-	// env::set_var("RUST_LOG", format!("actix_web={}", level));
-	// env_logger::init();
-	//
-	// //Connect to database
-	// let manager = ConnectionManager::<PgConnection>::new(settings.database.connection_url());
-	// let pool = r2d2::Pool::builder().build(manager)?;
+
+	let level = if cfg!(debug_assertions) {"info"} else {"error"};
+	env::set_var("RUST_LOG", format!("actix_web={}", level));
+	env_logger::init();
+
+	let manager = ConnectionManager::<PgConnection>::new(settings.database.connection_url());
+	let pool = r2d2::Pool::builder().build(manager)?;
 	//
 	// //Create the application state
 	// let state = AppState::new(settings, pool);
