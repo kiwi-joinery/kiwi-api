@@ -1,6 +1,6 @@
+use actix_web::dev::HttpResponseBuilder;
 use actix_web::HttpResponse;
 use serde::Serialize;
-use actix_web::dev::{HttpResponseBuilder};
 
 #[derive(Serialize, Debug)]
 struct Response<D: Serialize, E: Serialize> {
@@ -10,15 +10,12 @@ struct Response<D: Serialize, E: Serialize> {
 }
 
 pub trait APIResponse {
-
     fn success<T: Serialize>(&mut self, data: T) -> HttpResponse;
 
     fn error<T: Serialize>(&mut self, error: T) -> HttpResponse;
-
 }
 
 impl APIResponse for HttpResponseBuilder {
-
     fn success<T: Serialize>(&mut self, data: T) -> HttpResponse {
         let x: Response<T, ()> = Response {
             response: "SUCCESS",

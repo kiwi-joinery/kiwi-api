@@ -2,8 +2,13 @@
 CREATE TABLE users
 (
     id SERIAL PRIMARY KEY,
-    password_hash VARCHAR(255) NULL
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NULL,
+    password_reset_token VARCHAR(255) NULL
 );
+
+INSERT INTO users (name, email, password_hash) VALUES ('Default User', 'admin@contoso.com', '$2a$10$W0QseTznvCwlOHUd6g3ZieURwl26V5HVZbwk8dVa6HsdRpkHG4.d2');
 
 CREATE TABLE sessions
 (
@@ -22,3 +27,4 @@ CREATE TABLE files
 (
     id SERIAL PRIMARY KEY
 );
+

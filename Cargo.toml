@@ -1,5 +1,5 @@
 [package]
-name = "kiwi-api"
+name = "kiwi_api"
 version = "0.1.0"
 authors = ["Jacob Halsey <jacob@jhalsey.com>"]
 edition = "2018"
@@ -15,17 +15,16 @@ env_logger = "0.7.1"
 actix-web = "2.0"
 actix-rt = "1.0"
 serde_json = "1.0"
+actix_validated_forms = { git = "https://github.com/jacob-pro/actix-validated-forms" }
+actix_validated_forms_derive = { git = "https://github.com/jacob-pro/actix-validated-forms" }
+validator = "0.10.1"
+validator_derive = "0.10.1"
 
-#futures = "0.1.27"      # Rust-lang-nursery futures
-#failure = "0.1.5"       # Rust-lang-nursery improved error management
+
 #actix-web-httpauth = "0.3.1"    # Middleware for validating Basic Auth Header
-#actix-multipart = "0.1.2"   # Multipart forms
-
 #chrono = "0.4.6"    # Time library
 #serde_urlencoded = "0.5.5" # Serde for URL encoded query
 #bincode = "1.1.4"   # Implementation of Serde for Binary
-#validator = "0.8.0" # Struct Validation
-#validator_derive = "0.8.0"
 #bcrypt = "0.4.0"    # Password hashing
 #rand = "0.6.5"      # Random number generation
 #base64 = "0.10.1"
