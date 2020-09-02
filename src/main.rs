@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Starting server on: http://{}", address);
     HttpServer::new(move || {
         App::new()
-            .app_data(state.clone())
+            .data(state.clone())
             .wrap(middleware::Logger::default())
             .configure(api::configure)
     })
