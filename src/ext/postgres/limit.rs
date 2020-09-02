@@ -1,15 +1,15 @@
-use diesel::query_builder::{QueryFragment, Query, AstPass, AsQuery};
 use diesel::pg::Pg;
+use diesel::query_builder::{AsQuery, AstPass, Query, QueryFragment};
 use diesel::query_dsl::LoadQuery;
-use diesel::{PgConnection, QueryResult, RunQueryDsl};
 use diesel::sql_types::BigInt;
+use diesel::{PgConnection, QueryResult, RunQueryDsl};
 use serde::Serialize;
 
 // https://diesel.rs/guides/extending-diesel/
 
 impl<T> QueryFragment<Pg> for CountedLimit<T>
-    where
-        T: QueryFragment<Pg>,
+where
+    T: QueryFragment<Pg>,
 {
     fn walk_ast(&self, mut out: AstPass<Pg>) -> QueryResult<()> {
         out.push_sql("SELECT *, COUNT(*) OVER () FROM (");
@@ -22,14 +22,13 @@ impl<T> QueryFragment<Pg> for CountedLimit<T>
     }
 }
 
-impl_query_id!(CountedLimit<T>);
-
 impl<T: Query> Query for CountedLimit<T> {
     type SqlType = (T::SqlType, BigInt);
 }
 
 impl<T> RunQueryDsl<PgConnection> for CountedLimit<T> {}
 
+#[derive(QueryId)]
 pub struct CountedLimit<T> {
     query: T,
     limit: i64,
@@ -37,19 +36,21 @@ pub struct CountedLimit<T> {
 }
 
 impl<T> CountedLimit<T> {
-
     pub fn offset(self, offset: i64) -> Self {
         CountedLimit { offset, ..self }
     }
 
     pub fn load_with_total<U>(self, conn: &PgConnection) -> QueryResult<(CountedLimitResult<U>)>
-        where
-            Self: LoadQuery<PgConnection, (U, i64)>,
+    where
+        Self: LoadQuery<PgConnection, (U, i64)>,
     {
         let db_result = self.load::<(U, i64)>(conn)?;
-        let total = db_result.get(0).map(|(_, total)| total.to_owned()).unwrap_or(0);
+        let total = db_result
+            .get(0)
+            .map(|(_, total)| total.to_owned())
+            .unwrap_or(0);
         let results = db_result.into_iter().map(|(record, _)| record).collect();
-        Ok(CountedLimitResult{ results, total })
+        Ok(CountedLimitResult { results, total })
     }
 }
 
@@ -72,15 +73,13 @@ pub struct CountedLimitResult<T> {
 }
 
 impl<T> CountedLimitResult<T> {
-
     pub fn map<F, U>(self, func: F) -> CountedLimitResult<U>
-        where
-            F: Fn(T) -> U
+    where
+        F: Fn(T) -> U,
     {
         CountedLimitResult {
             results: self.results.into_iter().map(func).collect(),
-            total: self.total
+            total: self.total,
         }
     }
-
 }

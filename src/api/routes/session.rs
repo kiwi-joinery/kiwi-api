@@ -13,6 +13,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use bcrypt::verify;
 use diesel::prelude::*;
 use futures::future::Future;
+use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
@@ -108,18 +109,19 @@ struct LoginResponse {
 // }
 
 //Deletes the currently authenticated session
-// pub fn logout(
-//     auth: AuthenticatedUser,
-//     state: Data<AppState>,
-// ) -> impl Future<Item = HttpResponse, Error = APIError> {
-//     web::block(move || -> Result<_, APIError> {
-//         let db = state.new_connection();
-//         diesel::delete(&auth.session).execute(&db)?;
-//         Ok(())
-//     })
-//     .map(ok_response)
-//     .from_err()
-// }
+pub async fn logout(
+    auth: AuthenticatedUser,
+    state: Data<AppState>,
+) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<_, APIError> {
+        let db = state.new_connection();
+        diesel::delete(&auth.session).execute(&db)?;
+        Ok(())
+    })
+    .map_ok(ok_response)
+    .map_err(APIError::from)
+    .await
+}
 
 #[derive(Serialize)]
 struct SessionResponseItem {

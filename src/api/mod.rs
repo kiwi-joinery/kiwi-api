@@ -42,11 +42,11 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                     // .service(
                     //     resource("login").route(web::post().to(routes::session::password_login)),
                     // )
-                    // .service(
-                    //     resource("logout")
-                    //         .route(web::delete().to(routes::session::logout))
-                    //         .wrap(auth_mw.clone()),
-                    // )
+                    .service(
+                        resource("logout")
+                            .route(web::delete().to(routes::session::logout))
+                            .wrap(auth_mw.clone()),
+                    )
                     // .service(
                     //     resource("")
                     //         .route(web::get().to(routes::session::list))
