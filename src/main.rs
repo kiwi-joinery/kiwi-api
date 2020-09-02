@@ -1,6 +1,8 @@
+//TODO: Remove this
 #![allow(dead_code)]
 
 mod api;
+mod ext;
 mod models;
 mod schema;
 mod settings;
@@ -63,7 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Starting server on: http://{}", address);
     HttpServer::new(move || {
         App::new()
-            .data(state.clone())
+            .app_data(state.clone())
             .wrap(middleware::Logger::default())
             .configure(api::configure)
     })
