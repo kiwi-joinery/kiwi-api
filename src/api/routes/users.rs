@@ -228,7 +228,6 @@ pub async fn delete(
         let user_id = user.id;
 
         use crate::schema::sessions::dsl as S;
-
         diesel::delete(S::sessions.filter(S::user_id.eq(user_id))).execute(&db)?;
         diesel::delete(U::users.filter(U::id.eq(user_id))).execute(&db)?;
 
