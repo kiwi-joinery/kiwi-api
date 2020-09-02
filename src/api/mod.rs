@@ -2,7 +2,7 @@
 mod errors;
 mod response;
 //mod routes;
-//mod token;
+mod token;
 
 use actix_web::error::ResponseError;
 use actix_web::web::{self, Data, PathConfig};

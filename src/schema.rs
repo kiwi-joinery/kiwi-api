@@ -5,15 +5,6 @@ table! {
 }
 
 table! {
-    lectures (id) {
-        id -> Int4,
-        user_id -> Int4,
-        title -> Varchar,
-        file_id -> Int4,
-    }
-}
-
-table! {
     sessions (id) {
         id -> Int4,
         user_id -> Int4,
@@ -31,18 +22,14 @@ table! {
         name -> Varchar,
         email -> Varchar,
         password_hash -> Nullable<Varchar>,
-        is_admin -> Bool,
         password_reset_token -> Nullable<Varchar>,
     }
 }
 
-joinable!(lectures -> files (file_id));
-joinable!(lectures -> users (user_id));
 joinable!(sessions -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     files,
-    lectures,
     sessions,
     users,
 );

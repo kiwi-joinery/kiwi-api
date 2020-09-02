@@ -19,12 +19,11 @@ actix_validated_forms = { git = "https://github.com/jacob-pro/actix-validated-fo
 actix_validated_forms_derive = { git = "https://github.com/jacob-pro/actix-validated-forms" }
 validator = "0.10.1"
 validator_derive = "0.10.1"
-
+chrono = "0.4.15"
+rand = "0.7.3"
+base64 = "0.12.3"
 
 #actix-web-httpauth = "0.3.1"    # Middleware for validating Basic Auth Header
-#chrono = "0.4.6"    # Time library
 #serde_urlencoded = "0.5.5" # Serde for URL encoded query
 #bincode = "1.1.4"   # Implementation of Serde for Binary
 #bcrypt = "0.4.0"    # Password hashing
-#rand = "0.6.5"      # Random number generation
-#base64 = "0.10.1"

@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
-// mod ext;
 mod api;
+mod models;
+mod schema;
 mod settings;
 mod state;
-// mod schema;
-// mod models;
 
-// #[macro_use]
-// extern crate diesel;
+#[macro_use]
+extern crate diesel;
 #[macro_use]
 extern crate validator_derive;
 #[macro_use]
