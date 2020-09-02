@@ -1,6 +1,3 @@
-//TODO: Remove this
-#![allow(dead_code)]
-
 mod api;
 mod ext;
 mod models;

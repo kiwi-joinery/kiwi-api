@@ -13,9 +13,7 @@ use actix_validated_forms::form::ValidatedForm;
 use actix_validated_forms::query::ValidatedQuery;
 use actix_web::web::{Data, Path};
 use actix_web::{web, HttpResponse};
-use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
-use futures::future::Future;
 use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -95,7 +93,6 @@ pub struct CreateUserForm {
     name: String,
     #[validate(email)]
     email: String,
-    is_admin: bool,
 }
 
 fn assert_email_available(db: &Connection, email: &String) -> Result<(), APIError> {
@@ -147,34 +144,34 @@ pub async fn create(
     .await
 }
 
-// fn resolve_user(
-//     auth: &AuthenticatedUser,
-//     user_id: i32,
-//     conn: &Connection,
-// ) -> Result<User, APIError> {
-//     //If this isn't the logged in user - check that it exists and for admin
-//     if user_id == auth.user_id() {
-//         Ok(auth.user.clone())
-//     } else {
-//         let user = U::users.find(user_id).get_result::<User>(conn)?;
-//         auth.assert_is_admin()?;
-//         Ok(user)
-//     }
-// }
+fn resolve_user(
+    auth: &AuthenticatedUser,
+    user_id: i32,
+    conn: &Connection,
+) -> Result<User, APIError> {
+    //If this isn't the logged in user - check that it exists and for admin
+    if user_id == auth.user_id() {
+        Ok(auth.user.clone())
+    } else {
+        let user = U::users.find(user_id).get_result::<User>(conn)?;
+        Ok(user)
+    }
+}
 
-// pub fn get(
-//     auth: AuthenticatedUser,
-//     user_id: Path<i32>,
-//     state: Data<AppState>,
-// ) -> impl Future<Item = HttpResponse, Error = APIError> {
-//     web::block(move || -> Result<UserResponseItem, APIError> {
-//         let db = state.new_connection();
-//         let user = resolve_user(&auth, user_id.into_inner(), &db)?;
-//         Ok(user.into())
-//     })
-//     .map(ok_response)
-//     .from_err()
-// }
+pub async fn get(
+    auth: AuthenticatedUser,
+    user_id: Path<i32>,
+    state: Data<AppState>,
+) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<UserResponseItem, APIError> {
+        let db = state.new_connection();
+        let user = resolve_user(&auth, user_id.into_inner(), &db)?;
+        Ok(user.into())
+    })
+    .map_ok(ok_response)
+    .err_into()
+    .await
+}
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateUserForm {
@@ -182,82 +179,62 @@ pub struct UpdateUserForm {
     name: Option<String>,
     #[validate(email)]
     email: Option<String>,
-    password: Option<String>,
-    is_admin: Option<bool>,
 }
 
-// pub fn update(
-//     auth: AuthenticatedUser,
-//     user_id: Path<i32>,
-//     form: ValidatedForm<UpdateUserForm>,
-//     state: Data<AppState>,
-// ) -> impl Future<Item = HttpResponse, Error = APIError> {
-//     web::block(move || -> Result<UserResponseItem, APIError> {
-//         let db = state.new_connection();
-//         let user_id = user_id.into_inner();
-//         let mut user = resolve_user(&auth, user_id, &db)?;
-//
-//         match &form.name {
-//             Some(n) => {
-//                 user.name = n.to_owned();
-//             }
-//             _ => {}
-//         }
-//         match &form.email {
-//             Some(e) => {
-//                 if e != &user.email {
-//                     assert_email_available(&db, &e)?;
-//                     user.email = e.to_owned();
-//                 }
-//             }
-//             _ => {}
-//         }
-//         match &form.password {
-//             Some(p) => {
-//                 //Only users may do this - admins use reset link instead
-//                 if user_id != auth.user_id() {
-//                     return Err(APIError::Forbidden);
-//                 }
-//                 let hashed = hash(p, DEFAULT_COST)?;
-//                 user.password_hash = Some(hashed);
-//             }
-//             _ => {}
-//         };
-//         match form.is_admin {
-//             Some(a) => {
-//                 //Only admins may change permissions
-//                 auth.assert_is_admin()?;
-//                 user.is_admin = a;
-//             }
-//             _ => {}
-//         }
-//         diesel::update(&user).set(&user).execute(&db)?;
-//
-//         Ok(user.into())
-//     })
-//     .map(ok_response)
-//     .from_err()
-// }
-//
-// pub fn delete(
-//     auth: AuthenticatedUser,
-//     user_id: Path<i32>,
-//     state: Data<AppState>,
-// ) -> impl Future<Item = HttpResponse, Error = APIError> {
-//     web::block(move || -> Result<(), APIError> {
-//         let db = state.new_connection();
-//         let user = resolve_user(&auth, user_id.into_inner(), &db)?;
-//         let user_id = user.id;
-//
-//         use crate::schema::lectures::dsl as L;
-//         use crate::schema::sessions::dsl as S;
-//
-//         diesel::delete(L::lectures.filter(L::user_id.eq(user_id))).execute(&db)?;
-//         diesel::delete(S::sessions.filter(S::user_id.eq(user_id))).execute(&db)?;
-//         diesel::delete(U::users.filter(U::id.eq(user_id))).execute(&db)?;
-//
-//         Ok(())
-//     })
-//     .map(ok_response)
-//     .from_err()
-// }
+pub async fn update(
+    auth: AuthenticatedUser,
+    user_id: Path<i32>,
+    form: ValidatedForm<UpdateUserForm>,
+    state: Data<AppState>,
+) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<UserResponseItem, APIError> {
+        let db = state.new_connection();
+        let user_id = user_id.into_inner();
+        let mut user = resolve_user(&auth, user_id, &db)?;
+
+        match &form.name {
+            Some(n) => {
+                user.name = n.to_owned();
+            }
+            _ => {}
+        }
+        match &form.email {
+            Some(e) => {
+                if e != &user.email {
+                    assert_email_available(&db, &e)?;
+                    user.email = e.to_owned();
+                }
+            }
+            _ => {}
+        }
+
+        diesel::update(&user).set(&user).execute(&db)?;
+
+        Ok(user.into())
+    })
+    .map_ok(ok_response)
+    .err_into()
+    .await
+}
+
+pub async fn delete(
+    auth: AuthenticatedUser,
+    user_id: Path<i32>,
+    state: Data<AppState>,
+) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<(), APIError> {
+        let db = state.new_connection();
+        let user = resolve_user(&auth, user_id.into_inner(), &db)?;
+        let user_id = user.id;
+
+        use crate::schema::sessions::dsl as S;
+
+        diesel::delete(S::sessions.filter(S::user_id.eq(user_id))).execute(&db)?;
+        diesel::delete(U::users.filter(U::id.eq(user_id))).execute(&db)?;
+
+        Ok(())
+    })
+    .map_ok(ok_response)
+    .err_into()
+    .await
+}

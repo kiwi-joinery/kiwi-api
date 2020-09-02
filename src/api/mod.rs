@@ -57,10 +57,21 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                             .route(web::delete().to(routes::session::delete))
                             .wrap(auth_mw.clone()),
                     ),
-            ), // .service(scope("users")
-               // 	.service(resource("{user_id}")
-               // 		.route(web::put().to_async(routes::users::update))
-               // 	).wrap(auth_mw.clone())
-               // )
+            )
+            .service(
+                scope("users")
+                    .service(
+                        resource("")
+                            .route(web::get().to(routes::users::list))
+                            .route(web::post().to(routes::users::create)),
+                    )
+                    .service(
+                        resource("{user_id}")
+                            .route(web::get().to(routes::users::get))
+                            .route(web::put().to(routes::users::update))
+                            .route(web::delete().to(routes::users::delete)),
+                    )
+                    .wrap(auth_mw.clone()),
+            ),
     );
 }
