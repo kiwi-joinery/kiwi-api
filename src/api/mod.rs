@@ -39,24 +39,24 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .service(web::resource("").route(web::get().to(index)))
             .service(
                 scope("sessions")
-                    // .service(
-                    //     resource("login").route(web::post().to(routes::session::password_login)),
-                    // )
+                    .service(
+                        resource("login").route(web::post().to(routes::session::password_login)),
+                    )
                     .service(
                         resource("logout")
                             .route(web::delete().to(routes::session::logout))
                             .wrap(auth_mw.clone()),
                     )
-                    // .service(
-                    //     resource("")
-                    //         .route(web::get().to(routes::session::list))
-                    //         .wrap(auth_mw.clone()),
-                    // )
-                    // .service(
-                    //     resource("{session_id}")
-                    //         .route(web::delete().to(routes::session::delete))
-                    //         .wrap(auth_mw.clone()),
-                    // ),
+                    .service(
+                        resource("")
+                            .route(web::get().to(routes::session::list))
+                            .wrap(auth_mw.clone()),
+                    )
+                    .service(
+                        resource("{session_id}")
+                            .route(web::delete().to(routes::session::delete))
+                            .wrap(auth_mw.clone()),
+                    ),
             ), // .service(scope("users")
                // 	.service(resource("{user_id}")
                // 		.route(web::put().to_async(routes::users::update))

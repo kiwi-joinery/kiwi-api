@@ -1,6 +1,7 @@
 use crate::api::auth::AuthenticatedUser;
 use crate::api::errors::APIError;
 use crate::api::response::ok_response;
+use crate::api::routes::session::SESSION_TOKEN_BYTES;
 use crate::api::token::generate_token;
 use crate::ext::postgres::functions::strpos;
 use crate::ext::postgres::limit::{CountedLimitResult, CountingLimit};
@@ -15,6 +16,7 @@ use actix_web::{web, HttpResponse};
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use futures::future::Future;
+use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -54,38 +56,38 @@ impl From<User> for UserResponseItem {
     }
 }
 
-// pub fn list(
-//     auth: AuthenticatedUser,
-//     query: ValidatedQuery<ListUserQuery>,
-//     state: Data<AppState>,
-// ) -> impl Future<Item = HttpResponse, Error = APIError> {
-//     web::block(move || -> Result<_, APIError> {
-//         let db = state.new_connection();
-//         auth.assert_is_admin()?; //Admin required to list users
-//
-//         let result: (CountedLimitResult<User>) = match &query.search {
-//             None => U::users
-//                 .counted_limit(query.limit)
-//                 .offset(query.offset)
-//                 .load_with_total::<User>(&db)?,
-//             Some(search) => {
-//                 let like = format!("%{}%", search);
-//                 U::users
-//                     .filter(U::name.like(&like))
-//                     .or_filter(U::email.like(&like))
-//                     .order(strpos(U::name, search).asc())
-//                     .then_order_by(strpos(U::email, search).asc())
-//                     .counted_limit(query.limit)
-//                     .offset(query.offset)
-//                     .load_with_total::<User>(&db)?
-//             }
-//         };
-//
-//         Ok(result.map(UserResponseItem::from))
-//     })
-//     .map(ok_response)
-//     .from_err()
-// }
+pub async fn list(
+    _auth: AuthenticatedUser,
+    query: ValidatedQuery<ListUserQuery>,
+    state: Data<AppState>,
+) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<_, APIError> {
+        let db = state.new_connection();
+
+        let result: CountedLimitResult<User> = match &query.search {
+            None => U::users
+                .counted_limit(query.limit)
+                .offset(query.offset)
+                .load_with_total::<User>(&db)?,
+            Some(search) => {
+                let like = format!("%{}%", search);
+                U::users
+                    .filter(U::name.like(&like))
+                    .or_filter(U::email.like(&like))
+                    .order(strpos(U::name, search).asc())
+                    .then_order_by(strpos(U::email, search).asc())
+                    .counted_limit(query.limit)
+                    .offset(query.offset)
+                    .load_with_total::<User>(&db)?
+            }
+        };
+
+        Ok(result.map(UserResponseItem::from))
+    })
+    .map_ok(ok_response)
+    .err_into()
+    .await
+}
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateUserForm {
@@ -96,54 +98,54 @@ pub struct CreateUserForm {
     is_admin: bool,
 }
 
-// fn assert_email_available(db: &Connection, email: &String) -> Result<(), APIError> {
-//     let count = U::users
-//         .filter(U::email.eq(email))
-//         .count()
-//         .get_result::<i64>(db)?;
-//     if count > 0 {
-//         Err(APIError::BadRequest {
-//             code: "EMAIL_TAKEN".to_owned(),
-//             description: None,
-//         })
-//     } else {
-//         Ok(())
-//     }
-// }
+fn assert_email_available(db: &Connection, email: &String) -> Result<(), APIError> {
+    let count = U::users
+        .filter(U::email.eq(email))
+        .count()
+        .get_result::<i64>(db)?;
+    if count > 0 {
+        Err(APIError::BadRequest {
+            code: "EMAIL_TAKEN".to_owned(),
+            description: None,
+        })
+    } else {
+        Ok(())
+    }
+}
 
-// pub fn create(
-//     auth: AuthenticatedUser,
-//     form: ValidatedForm<CreateUserForm>,
-//     state: Data<AppState>,
-// ) -> impl Future<Item = HttpResponse, Error = APIError> {
-//     web::block(move || -> Result<UserResponseItem, APIError> {
-//         let db = state.new_connection();
-//         auth.assert_is_admin()?; //Admin required to create users
-//         assert_email_available(&db, &form.email)?;
-//
-//         let reset = generate_token(RESET_TOKEN_BYTES);
-//
-//         let insert = NewUser {
-//             name: form.name.clone(),
-//             email: form.email.clone(),
-//             password_hash: None,
-//             password_reset_token: Some(reset),
-//         };
-//
-//         let user: User = diesel::insert_into(U::users)
-//             .values(&insert)
-//             .get_result(&db)?;
-//
-//         if insert.password_reset_token.is_some() {
-//             //TODO: Email
-//             println!("Send email");
-//         }
-//
-//         Ok(user.into())
-//     })
-//     .map(ok_response)
-//     .from_err()
-// }
+pub async fn create(
+    _auth: AuthenticatedUser,
+    form: ValidatedForm<CreateUserForm>,
+    state: Data<AppState>,
+) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<UserResponseItem, APIError> {
+        let db = state.new_connection();
+        assert_email_available(&db, &form.email)?;
+
+        let reset = generate_token(SESSION_TOKEN_BYTES);
+
+        let insert = NewUser {
+            name: form.name.clone(),
+            email: form.email.clone(),
+            password_hash: None,
+            password_reset_token: Some(reset),
+        };
+
+        let user: User = diesel::insert_into(U::users)
+            .values(&insert)
+            .get_result(&db)?;
+
+        if insert.password_reset_token.is_some() {
+            //TODO: Email
+            println!("Send email");
+        }
+
+        Ok(user.into())
+    })
+    .map_ok(ok_response)
+    .err_into()
+    .await
+}
 
 // fn resolve_user(
 //     auth: &AuthenticatedUser,

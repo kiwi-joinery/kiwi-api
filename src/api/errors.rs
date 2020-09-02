@@ -156,9 +156,8 @@ where
     }
 }
 
-// impl From<bcrypt::BcryptError> for APIError {
-//     fn from(err: bcrypt::BcryptError) -> Self {
-//         APIError::UnderlyingError("Bcrypt".to_owned(), err.into())
-//     }
-// }
-//
+impl From<bcrypt::BcryptError> for APIError {
+    fn from(err: bcrypt::BcryptError) -> Self {
+        APIError::InternalError(format!("{}", err))
+    }
+}

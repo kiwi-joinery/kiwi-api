@@ -40,7 +40,7 @@ impl<T> CountedLimit<T> {
         CountedLimit { offset, ..self }
     }
 
-    pub fn load_with_total<U>(self, conn: &PgConnection) -> QueryResult<(CountedLimitResult<U>)>
+    pub fn load_with_total<U>(self, conn: &PgConnection) -> QueryResult<CountedLimitResult<U>>
     where
         Self: LoadQuery<PgConnection, (U, i64)>,
     {
