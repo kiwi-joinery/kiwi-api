@@ -16,8 +16,6 @@ use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
-// Use a 16 byte / 128 bit token
-// https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Session_Management_Cheat_Sheet.md#session-id-length
 pub const SESSION_TOKEN_BYTES: u8 = 32;
 
 #[derive(Deserialize)]

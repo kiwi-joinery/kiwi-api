@@ -53,10 +53,4 @@ joinable!(gallery_files -> gallery_items (item_id));
 joinable!(gallery_items -> files (original_file_id));
 joinable!(sessions -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
-    files,
-    gallery_files,
-    gallery_items,
-    sessions,
-    users,
-);
+allow_tables_to_appear_in_same_query!(files, gallery_files, gallery_items, sessions, users,);

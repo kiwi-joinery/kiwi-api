@@ -34,7 +34,6 @@ pub async fn validator(
         use crate::schema::sessions::dsl as S;
         use crate::schema::users::dsl as U;
 
-        //To improve performance we could cache the result in Redis
         let db = state.new_connection();
         let result: (Session, User) = match S::sessions
             .filter(S::user_id.eq(user).and(S::token.eq(pass)))
@@ -46,7 +45,7 @@ pub async fn validator(
             Err(e) => return Err(e.into()),
         };
 
-        //This could also be moved onto a background threadpool
+        //TODO: this could be moved onto a background thread
         diesel::update(&result.0)
             .set((
                 S::user_agent.eq(user_agent),
@@ -55,12 +54,10 @@ pub async fn validator(
             ))
             .execute(&db)?;
 
-        let authenticated_user = AuthenticatedUser {
+        Ok(AuthenticatedUser {
             session: result.0,
             user: result.1,
-        };
-
-        Ok(authenticated_user)
+        })
     })
     .await;
 

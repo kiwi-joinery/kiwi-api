@@ -44,7 +44,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .service(
                 scope("sessions")
                     .service(
-                        resource("login").route(web::post().to(routes::session::password_login)),
+                        resource("login")
+                            .route(web::post().to(routes::session::password_login))
+                            .wrap(
+                                RateLimiter::new(MemoryStoreActor::from(rl_store.clone()).start())
+                                    .with_interval(Duration::from_secs(120))
+                                    .with_max_requests(5),
+                            ),
                     )
                     .service(
                         resource("logout")
@@ -84,6 +90,22 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                         RateLimiter::new(MemoryStoreActor::from(rl_store.clone()).start())
                             .with_interval(Duration::from_secs(120))
                             .with_max_requests(3),
+                    ),
+            )
+            .service(
+                scope("password_reset")
+                    .service(
+                        resource("request")
+                            .route(web::post().to(routes::password_reset::reset_request)),
+                    )
+                    .service(
+                        resource("submit")
+                            .route(web::post().to(routes::password_reset::reset_submit)),
+                    )
+                    .wrap(
+                        RateLimiter::new(MemoryStoreActor::from(rl_store.clone()).start())
+                            .with_interval(Duration::from_secs(120))
+                            .with_max_requests(5),
                     ),
             ),
     );

@@ -1,10 +1,11 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
+use crate::schema::users::dsl as U;
 use crate::state::AppState;
 use actix_validated_forms::form::ValidatedForm;
-use actix_validated_forms::query::ValidatedQuery;
 use actix_web::web::Data;
 use actix_web::{web, HttpResponse};
+use diesel::prelude::*;
 use futures::TryFutureExt;
 use serde::Deserialize;
 use validator::Validate;
@@ -17,7 +18,7 @@ pub struct ResetRequest {
 
 pub async fn reset_request(
     state: Data<AppState>,
-    email: ValidatedQuery<ResetRequest>,
+    email: ValidatedForm<ResetRequest>,
 ) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> { Ok(()) })
         .map_ok(ok_json)
