@@ -89,6 +89,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 
-pub fn ok_response<T: Serialize>(data: T) -> HttpResponse {
+pub fn ok_json<T: Serialize>(data: T) -> HttpResponse {
     HttpResponse::Ok().json(data)
 }

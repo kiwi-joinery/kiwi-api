@@ -6,8 +6,14 @@ Kiwi Joinery: A Brixham based manufacturer of bespoke staircases, doors, windows
 
 This is the API which powers our website including the gallery and contact form etc.
 
-## Building on Windows
+## Technical
+
+This is a HTTP server built using the Actix Web framework for Rust.
+
+Working with the database: \
+`cargo install diesel_cli --no-default-features --features "postgres"`
+
+### Building on Windows
 
 - Set `PQ_LIB_DIR` environment variable to `C:\Program Files\PostgreSQL\12\lib`
 - Add `C:\Program Files\PostgreSQL\12\bin` to `PATH`
-- `cargo install diesel_cli --no-default-features --features "postgres"`

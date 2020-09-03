@@ -1,6 +1,6 @@
 use crate::api::auth::AuthenticatedUser;
 use crate::api::errors::APIError;
-use crate::api::ok_response;
+use crate::api::ok_json;
 use crate::api::routes::session::SESSION_TOKEN_BYTES;
 use crate::api::token::generate_token;
 use crate::ext::postgres::functions::strpos;
@@ -82,7 +82,7 @@ pub async fn list(
 
         Ok(result.map(UserResponseItem::from))
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -139,7 +139,7 @@ pub async fn create(
 
         Ok(user.into())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -168,7 +168,7 @@ pub async fn get(
         let user = resolve_user(&auth, user_id.into_inner(), &db)?;
         Ok(user.into())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -212,7 +212,7 @@ pub async fn update(
 
         Ok(user.into())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -233,7 +233,7 @@ pub async fn delete(
 
         Ok(())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }

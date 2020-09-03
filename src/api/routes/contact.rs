@@ -1,5 +1,5 @@
 use crate::api::errors::APIError;
-use crate::api::ok_response;
+use crate::api::ok_json;
 use crate::state::AppState;
 use actix_validated_forms::form::ValidatedForm;
 use actix_web::web::Data;
@@ -59,7 +59,7 @@ pub async fn contact_form(
         mailer.send(email.into())?;
         Ok(())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .map_err(APIError::from)
     .await
 }

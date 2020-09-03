@@ -1,6 +1,6 @@
 use crate::api::auth::AuthenticatedUser;
 use crate::api::errors::APIError;
-use crate::api::ok_response;
+use crate::api::ok_json;
 use crate::api::routes::users::UserResponseItem;
 use crate::api::token::generate_token;
 use crate::ext::actix::{ConnectionInfoExt, HeaderMapExt};
@@ -103,7 +103,7 @@ pub async fn password_login(
             user: user.into(),
         })
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -118,7 +118,7 @@ pub async fn logout(
         diesel::delete(&auth.session).execute(&db)?;
         Ok(())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -159,7 +159,7 @@ pub async fn list(
             .collect::<Vec<_>>();
         Ok(formatted)
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
@@ -179,7 +179,7 @@ pub async fn delete(
         diesel::delete(&session).execute(&db)?;
         Ok(())
     })
-    .map_ok(ok_response)
+    .map_ok(ok_json)
     .err_into()
     .await
 }
