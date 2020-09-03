@@ -49,3 +49,29 @@ pub struct NewSession {
     pub last_ip: Vec<u8>,
     pub user_agent: String,
 }
+
+#[derive(Queryable, Debug, Identifiable)]
+pub struct File {
+    pub id: i32,
+    pub size: i32,
+    pub extension: String,
+}
+
+#[derive(Queryable, Debug, Identifiable)]
+#[primary_key(item_id, file_id)]
+pub struct GalleryFile {
+    pub item_id: i32,
+    pub file_id: i32,
+    pub height: i32,
+    pub width: i32,
+}
+
+#[derive()]
+pub struct GalleryItem {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    pub original_file_id: i32,
+    pub position: String,
+    pub category: String,
+}

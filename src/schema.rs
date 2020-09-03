@@ -1,6 +1,28 @@
 table! {
     files (id) {
         id -> Int4,
+        size -> Int4,
+        extension -> Varchar,
+    }
+}
+
+table! {
+    gallery_files (item_id, file_id) {
+        item_id -> Int4,
+        file_id -> Int4,
+        height -> Int4,
+        width -> Int4,
+    }
+}
+
+table! {
+    gallery_item (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
+        original_file_id -> Int4,
+        position -> Varchar,
+        category -> Varchar,
     }
 }
 
@@ -26,6 +48,13 @@ table! {
     }
 }
 
+joinable!(gallery_item -> files (original_file_id));
 joinable!(sessions -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(files, sessions, users,);
+allow_tables_to_appear_in_same_query!(
+    files,
+    gallery_files,
+    gallery_item,
+    sessions,
+    users,
+);
