@@ -1,15 +1,23 @@
 use config::{Config, ConfigError, Environment, File, FileFormat};
+use lettre::smtp::authentication::Credentials;
+use lettre::{smtp, ClientSecurity, ClientTlsParameters, SmtpClient, SmtpTransport};
+use native_tls::TlsConnector;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct App {
     pub port: u16,
     pub storage: String,
-    pub password: Option<String>,
+    pub contact_mailbox: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Mailer {}
+pub struct Mailer {
+    host: String,
+    port: u16,
+    pub email: String,
+    password: String,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Database {
@@ -48,5 +56,17 @@ impl Database {
             "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.database
         )
+    }
+}
+
+impl Mailer {
+    pub fn smtp_transport(&self) -> Result<SmtpTransport, smtp::error::Error> {
+        let connector = TlsConnector::new().unwrap();
+        let client = SmtpClient::new(
+            format!("{}:{}", self.host, self.port),
+            ClientSecurity::Required(ClientTlsParameters::new(self.host.clone(), connector)),
+        )?
+        .credentials(Credentials::new(self.email.clone(), self.password.clone()));
+        Ok(SmtpTransport::new(client))
     }
 }

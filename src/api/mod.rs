@@ -72,6 +72,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                             .route(web::delete().to(routes::users::delete)),
                     )
                     .wrap(auth_mw.clone()),
-            ),
+            )
+            .service(resource("contact").route(web::post().to(routes::contact::contact_form))),
     );
 }

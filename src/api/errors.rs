@@ -162,3 +162,9 @@ impl From<bcrypt::BcryptError> for APIError {
         APIError::InternalError(format!("{}", err))
     }
 }
+
+impl From<lettre::smtp::error::Error> for APIError {
+    fn from(err: lettre::smtp::error::Error) -> Self {
+        APIError::InternalError(format!("{}", err))
+    }
+}
