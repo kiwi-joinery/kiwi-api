@@ -18,8 +18,8 @@
 								"exec": [
 									"var json = JSON.parse(responseBody);",
 									"if (json.response == \"SUCCESS\") {",
-									"    pm.environment.set(\"user_id\", json.data.user.id);",
-									"    pm.environment.set(\"token\", json.data.token);",
+									"    pm.environment.set(\"user_id\", json.user.id);",
+									"    pm.environment.set(\"token\", json.token);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -504,6 +504,49 @@
 									"value": "",
 									"disabled": true
 								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "contact",
+			"item": [
+				{
+					"name": "contact",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "name",
+									"value": "Name",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "reply",
+									"type": "text"
+								},
+								{
+									"key": "message",
+									"value": "Longer than 10 chars",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{api_url}}/contact",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"contact"
 							]
 						}
 					},

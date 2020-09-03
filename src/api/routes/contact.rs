@@ -1,5 +1,5 @@
 use crate::api::errors::APIError;
-use crate::api::response::ok_response;
+use crate::api::ok_response;
 use crate::state::AppState;
 use actix_validated_forms::form::ValidatedForm;
 use actix_web::web::Data;
@@ -25,7 +25,9 @@ fn validate_no_urls(message: &str) -> Result<(), ValidationError> {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
     if finder.links(message).count() > 0 {
-        return Err(ValidationError::new("Your message must not include URLs"));
+        return Err(ValidationError::new(
+            "Sorry your message can't include URLs",
+        ));
     }
     Ok(())
 }

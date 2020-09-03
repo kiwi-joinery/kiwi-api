@@ -1,6 +1,5 @@
 mod auth;
 mod errors;
-mod response;
 mod routes;
 mod token;
 
@@ -10,7 +9,9 @@ use actix_validated_forms::form::ValidatedFormConfig;
 use actix_validated_forms::query::ValidatedQueryConfig;
 use actix_web::error::ResponseError;
 use actix_web::web::{self, Data, PathConfig};
+use actix_web::HttpResponse;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use serde::Serialize;
 
 //Return a 404 if the path couldn't be found in a scope
 fn scope(path: &str) -> actix_web::Scope {
@@ -75,4 +76,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             )
             .service(resource("contact").route(web::post().to(routes::contact::contact_form))),
     );
+}
+
+pub fn ok_response<T: Serialize>(data: T) -> HttpResponse {
+    HttpResponse::Ok().json(data)
 }

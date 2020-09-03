@@ -1,6 +1,6 @@
 use crate::api::auth::AuthenticatedUser;
 use crate::api::errors::APIError;
-use crate::api::response::ok_response;
+use crate::api::ok_response;
 use crate::api::routes::users::UserResponseItem;
 use crate::api::token::generate_token;
 use crate::ext::actix::{ConnectionInfoExt, HeaderMapExt};
