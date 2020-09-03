@@ -16,7 +16,7 @@ table! {
 }
 
 table! {
-    gallery_item (id) {
+    gallery_items (id) {
         id -> Int4,
         name -> Varchar,
         description -> Varchar,
@@ -48,13 +48,15 @@ table! {
     }
 }
 
-joinable!(gallery_item -> files (original_file_id));
+joinable!(gallery_files -> files (file_id));
+joinable!(gallery_files -> gallery_items (item_id));
+joinable!(gallery_items -> files (original_file_id));
 joinable!(sessions -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     files,
     gallery_files,
-    gallery_item,
+    gallery_items,
     sessions,
     users,
 );

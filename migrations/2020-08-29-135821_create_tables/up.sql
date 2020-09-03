@@ -30,7 +30,7 @@ CREATE TABLE files
     extension VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE gallery_item
+CREATE TABLE gallery_items
 (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -47,5 +47,8 @@ CREATE TABLE gallery_files
     file_id INT NOT NULL,
     height INT NOT NULL,
     width INT NOT NULL,
-    PRIMARY KEY (item_id, file_id)
+    PRIMARY KEY (item_id, file_id),
+    FOREIGN KEY (item_id) REFERENCES gallery_items (id),
+    FOREIGN KEY (file_id) REFERENCES files (id)
+
 );
