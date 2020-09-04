@@ -33,8 +33,7 @@ CREATE TABLE files
 CREATE TABLE gallery_items
 (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description VARCHAR(4096) NOT NULL,
+    description VARCHAR(4096) NULL,
     original_file_id INT NOT NULL,
     position VARCHAR UNIQUE NOT NULL,
     category VARCHAR(255) CHECK (category IN ('STAIRCASES', 'DOORS', 'WINDOWS', 'OTHER')) NOT NULL,

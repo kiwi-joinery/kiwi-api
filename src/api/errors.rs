@@ -144,6 +144,12 @@ impl From<actix_validated_forms::validator::ValidationErrors> for APIError {
     }
 }
 
+impl From<actix_validated_forms::multipart::MultipartErrorWrapper> for APIError {
+    fn from(err: actix_validated_forms::multipart::MultipartErrorWrapper) -> Self {
+        APIError::ValidationError(format!("{}", err))
+    }
+}
+
 impl<T> From<actix_validated_forms::error::ValidatedFormError<T>> for APIError
 where
     T: std::fmt::Debug + std::fmt::Display + Into<APIError>,

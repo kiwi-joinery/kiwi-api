@@ -7,6 +7,7 @@ use crate::api::errors::APIError;
 use crate::state::AppState;
 use actix_ratelimit::{MemoryStore, MemoryStoreActor, RateLimiter};
 use actix_validated_forms::form::ValidatedFormConfig;
+use actix_validated_forms::multipart::ValidatedMultipartFormConfig;
 use actix_validated_forms::query::ValidatedQueryConfig;
 use actix_web::error::ResponseError;
 use actix_web::web::{self, Data, PathConfig};
@@ -39,6 +40,10 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .app_data(ValidatedFormConfig::default().error_handler(|e, _| APIError::from(e).into()))
             .app_data(
                 ValidatedQueryConfig::default().error_handler(|e, _| APIError::from(e).into()),
+            )
+            .app_data(
+                ValidatedMultipartFormConfig::default()
+                    .error_handler(|e, _| APIError::from(e).into()),
             )
             .service(web::resource("").route(web::get().to(index)))
             .service(
@@ -95,17 +100,15 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .service(
                 scope("password_reset")
                     .service(
-                        resource("request")
-                            .route(web::post().to(routes::password_reset::reset_request)),
+                        resource("request").route(web::post().to(routes::password_reset::request)),
                     )
                     .service(
-                        resource("submit")
-                            .route(web::post().to(routes::password_reset::reset_submit)),
+                        resource("submit").route(web::post().to(routes::password_reset::submit)),
                     )
                     .wrap(
                         RateLimiter::new(MemoryStoreActor::from(rl_store.clone()).start())
                             .with_interval(Duration::from_secs(120))
-                            .with_max_requests(5),
+                            .with_max_requests(3),
                     ),
             ),
     );

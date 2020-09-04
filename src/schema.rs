@@ -1,7 +1,7 @@
 table! {
     files (id) {
         id -> Int4,
-        size -> Int4,
+        bytes -> Int8,
         extension -> Varchar,
     }
 }
@@ -18,8 +18,7 @@ table! {
 table! {
     gallery_items (id) {
         id -> Int4,
-        name -> Varchar,
-        description -> Varchar,
+        description -> Nullable<Varchar>,
         original_file_id -> Int4,
         position -> Varchar,
         category -> Varchar,

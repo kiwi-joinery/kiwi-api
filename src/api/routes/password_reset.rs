@@ -22,7 +22,7 @@ pub struct ResetRequest {
     email: String,
 }
 
-pub async fn reset_request(
+pub async fn request(
     state: Data<AppState>,
     email: ValidatedForm<ResetRequest>,
 ) -> Result<HttpResponse, APIError> {
@@ -91,7 +91,7 @@ pub struct ResetSubmit {
     new_password: String,
 }
 
-pub async fn reset_submit(
+pub async fn submit(
     state: Data<AppState>,
     form: ValidatedForm<ResetSubmit>,
 ) -> Result<HttpResponse, APIError> {

@@ -69,8 +69,7 @@ pub struct GalleryFile {
 #[derive()]
 pub struct GalleryItem {
     pub id: i32,
-    pub name: String,
-    pub description: String,
+    pub description: Option<String>,
     pub original_file_id: i32,
     pub position: String,
     pub category: String,
