@@ -1,7 +1,7 @@
 use crate::api::auth::AuthenticatedUser;
 use crate::api::errors::APIError;
 use crate::api::ok_json;
-use crate::api::routes::session::SESSION_TOKEN_BYTES;
+use crate::api::routes::session::AUTH_TOKEN_BYTES;
 use crate::api::token::generate_token;
 use crate::ext::postgres::functions::strpos;
 use crate::ext::postgres::limit::{CountedLimitResult, CountingLimit};
@@ -119,7 +119,7 @@ pub async fn create(
         let db = state.new_connection();
         assert_email_available(&db, &form.email)?;
 
-        let reset = generate_token(SESSION_TOKEN_BYTES);
+        let reset = generate_token(AUTH_TOKEN_BYTES);
 
         let insert = NewUser {
             name: form.name.clone(),

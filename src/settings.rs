@@ -15,7 +15,7 @@ pub struct App {
 pub struct Mailer {
     host: String,
     port: u16,
-    pub email: String,
+    email: String,
     password: String,
 }
 
@@ -68,5 +68,9 @@ impl Mailer {
         )?
         .credentials(Credentials::new(self.email.clone(), self.password.clone()));
         Ok(SmtpTransport::new(client))
+    }
+
+    pub fn get_from_address(&self) -> &str {
+        &self.email
     }
 }

@@ -16,7 +16,7 @@ use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
-pub const SESSION_TOKEN_BYTES: u8 = 32;
+pub const AUTH_TOKEN_BYTES: u8 = 32;
 
 #[derive(Deserialize)]
 pub struct LoginForm {
@@ -48,10 +48,13 @@ pub async fn password_login(
         };
 
         //Fetch the user with the submitted email
-        let user: User = match U::users.filter(U::email.eq(&form.email)).first::<User>(&db) {
-            Ok(r) => r,
-            Err(diesel::result::Error::NotFound) => return Err(APIError::IncorrectCredentials),
-            Err(e) => return Err(e.into()),
+        let user: User = match U::users
+            .filter(U::email.eq(&form.email))
+            .first::<User>(&db)
+            .optional()?
+        {
+            Some(r) => r,
+            None => return Err(APIError::IncorrectCredentials),
         };
 
         //Check that the user does actually have a password set
@@ -60,21 +63,15 @@ pub async fn password_login(
             None => return Err(APIError::IncorrectCredentials),
         };
 
-        use std::time::Instant;
-        let start = Instant::now();
         //Check that the password matches
         if !(verify(&form.password, &hashed)?) {
             return Err(APIError::IncorrectCredentials);
         };
-        println!("{}ms to verify password ", start.elapsed().as_millis());
 
         //See if a session exists for this IP + Agent
         let session: Option<Session> = Session::belonging_to(&user)
-            .filter(
-                S::last_ip
-                    .eq(ip_bin.clone())
-                    .and(S::user_agent.eq(user_agent.clone())),
-            )
+            .filter(S::last_ip.eq(&ip_bin))
+            .filter(S::user_agent.eq(&user_agent))
             .first::<Session>(&db)
             .optional()?;
 
@@ -82,7 +79,7 @@ pub async fn password_login(
             Some(val) => val.token,
             None => {
                 //If not create new token and session
-                let new_token = generate_token(SESSION_TOKEN_BYTES);
+                let new_token = generate_token(AUTH_TOKEN_BYTES);
                 let session = NewSession {
                     user_id: user.id,
                     token: new_token.clone(),
