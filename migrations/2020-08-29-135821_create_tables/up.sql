@@ -26,7 +26,7 @@ CREATE TABLE sessions
 CREATE TABLE files
 (
     id SERIAL PRIMARY KEY,
-    size INT NOT NULL,
+    bytes BIGINT NOT NULL,
     extension VARCHAR(255) NOT NULL
 );
 
@@ -36,7 +36,7 @@ CREATE TABLE gallery_items
     name VARCHAR(255) NOT NULL,
     description VARCHAR(4096) NOT NULL,
     original_file_id INT NOT NULL,
-    position VARCHAR NOT NULL,
+    position VARCHAR UNIQUE NOT NULL,
     category VARCHAR(255) CHECK (category IN ('STAIRCASES', 'DOORS', 'WINDOWS', 'OTHER')) NOT NULL,
     FOREIGN KEY (original_file_id) REFERENCES files (id)
 );
@@ -50,5 +50,4 @@ CREATE TABLE gallery_files
     PRIMARY KEY (item_id, file_id),
     FOREIGN KEY (item_id) REFERENCES gallery_items (id),
     FOREIGN KEY (file_id) REFERENCES files (id)
-
 );

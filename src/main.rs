@@ -12,6 +12,8 @@ extern crate validator_derive;
 #[macro_use]
 extern crate diesel_migrations;
 embed_migrations!();
+#[macro_use]
+extern crate maplit;
 
 use actix_web::{middleware, App, HttpServer};
 use diesel::prelude::*;

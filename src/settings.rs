@@ -9,6 +9,7 @@ pub struct App {
     pub port: u16,
     pub storage: String,
     pub contact_mailbox: String,
+    pub password_reset_url: String,
 }
 
 #[derive(Debug, Deserialize)]

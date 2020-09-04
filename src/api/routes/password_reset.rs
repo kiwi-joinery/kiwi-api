@@ -55,12 +55,23 @@ pub async fn reset_request(
             }
         };
 
+        let params = hashmap! {
+            "email" => &email.email,
+            "b" => &token,
+        };
+        let body = format!(
+            "Kiwi Admin Password Reset Link: \n\n\
+             {}?{}",
+            state.settings.app.password_reset_url,
+            serde_urlencoded::to_string(params).unwrap()
+        );
+
         let email = EmailBuilder::new()
             .to(email.email.as_str())
             .from(state.settings.mailer.get_from_address())
             .reply_to("noreply@kiwijoinerydevon.co.uk")
             .subject("Kiwi Website Password Reset")
-            .body(token)
+            .body(body)
             .build()
             .unwrap();
         mailer.send(email.into())?;

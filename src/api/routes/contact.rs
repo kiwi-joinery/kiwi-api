@@ -39,11 +39,11 @@ pub async fn contact_form(
     web::block(move || -> Result<_, APIError> {
         let mut mailer = state.settings.mailer.smtp_transport()?;
         let msg = format!(
-            "<body>\n
-            <h3>Message:</h3><p>{}</p>\n
-            <h3>Sent by: </h3><p>{}</p>\n
-            <h3>Sent from: </h3><p>{}</p>\n
-            <br><br><hr>\n
+            "<body>\n\
+            <h3>Message:</h3><p>{}</p>\n\
+            <h3>Sent by: </h3><p>{}</p>\n\
+            <h3>Sent from: </h3><p>{}</p>\n\
+            <br><br><hr>\n\
             </body>\n\
             </html>",
             contact.message, contact.name, contact.email
