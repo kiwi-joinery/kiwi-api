@@ -51,8 +51,8 @@ pub async fn contact_form(
         let email = EmailBuilder::new()
             .to(state.settings.app.contact_mailbox.as_str())
             .from(state.settings.mailer.get_from_address())
-            .reply_to(format!("{} <{}>", &contact.name, &contact.email))
-            .subject("Message from Kiwi Website contact form")
+            .reply_to(contact.email.as_str())
+            .subject(format!("{} via Kiwi Website", &contact.name))
             .html(msg)
             .build()
             .unwrap();
