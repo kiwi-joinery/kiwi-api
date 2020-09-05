@@ -57,7 +57,7 @@ pub struct File {
     pub extension: Option<String>,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Insertable)]
 #[primary_key(item_id, file_id)]
 pub struct GalleryFile {
     pub item_id: i32,

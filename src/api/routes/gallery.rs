@@ -1,6 +1,6 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
-use crate::models::{File, GalleryItem};
+use crate::models::{File, GalleryFile, GalleryItem};
 use crate::schema::files::dsl as FilesDSL;
 use crate::schema::gallery_files::dsl as GalleryFilesDSL;
 use crate::schema::gallery_items::dsl as GalleryItemsDSL;
@@ -69,11 +69,11 @@ pub async fn create_item(
     web::block(move || -> Result<_, APIError> {
         // Check uploaded file is valid image
         let form = form.into_inner();
-        let (img, format) = || -> Result<_, ImageError> {
+        let img = || -> Result<_, ImageError> {
             let img_bytes = fs::read(form.image.file.path()).unwrap();
             let format = guess_format(&img_bytes)?;
             let img = image::load_from_memory(&img_bytes)?;
-            Ok((img, format))
+            Ok(img)
         }()
         .map_err(|_| APIError::BadRequest {
             code: "BAD_IMAGE".to_string(),
@@ -82,7 +82,7 @@ pub async fn create_item(
 
         let db = state.new_connection();
         let mut created = Vec::new();
-        let res = db
+        let gallery_item_id = db
             .transaction::<_, APIError, _>(|| {
                 let ext = form.image.get_extension().map(|x| x.to_owned());
                 let (original_file, original_path) = create_file(
@@ -126,16 +126,15 @@ pub async fn create_item(
                     )?;
                     created.push(path);
                     diesel::insert_into(GalleryFilesDSL::gallery_files)
-                        .values((
-                            GalleryFilesDSL::item_id.eq(gallery_item.id),
-                            GalleryFilesDSL::file_id.eq(db_file.id),
-                            GalleryFilesDSL::height.eq(img.height() as i32),
-                            GalleryFilesDSL::width.eq(img.width() as i32),
-                        ))
+                        .values(&GalleryFile {
+                            item_id: gallery_item.id,
+                            file_id: db_file.id,
+                            height: img.height() as i32,
+                            width: img.width() as i32,
+                        })
                         .execute(&db)?;
                 }
-
-                Ok(())
+                Ok(gallery_item.id)
             })
             .map_err(|e| {
                 created.iter().for_each(|f| {
