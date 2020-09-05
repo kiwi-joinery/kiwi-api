@@ -3,14 +3,22 @@ use lettre::smtp::authentication::Credentials;
 use lettre::{smtp, ClientSecurity, ClientTlsParameters, SmtpClient, SmtpTransport};
 use native_tls::TlsConnector;
 use serde::Deserialize;
+use std::path::Path;
 use url::Url;
+use validator::{Validate, ValidationError};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct App {
     pub port: u16,
-    pub storage: String,
+    #[validate(custom = "validate_folder_path")]
+    pub storage_folder: Box<Path>,
     pub contact_mailbox: String,
     pub password_reset_url: Url,
+}
+
+fn validate_folder_path(path: &Box<Path>) -> Result<(), ValidationError> {
+    std::fs::create_dir_all(path).map_err(|e| ValidationError::new("invalid folder path"))?;
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,8 +38,9 @@ pub struct Database {
     database: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct Settings {
+    #[validate]
     pub app: App,
     pub database: Database,
     pub mailer: Mailer,
@@ -48,7 +57,10 @@ impl Settings {
             }
         }
         s.merge(Environment::new())?;
-        s.try_into()
+        let r: Settings = s.try_into()?;
+        r.validate()
+            .map_err(|e| ConfigError::Message(format!("{}", e)))?;
+        Ok(r)
     }
 }
 

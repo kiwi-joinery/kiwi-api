@@ -53,7 +53,7 @@ pub struct NewSession {
 #[derive(Queryable, Debug, Identifiable)]
 pub struct File {
     pub id: i32,
-    pub size: i32,
+    pub bytes: i64,
     pub extension: Option<String>,
 }
 
