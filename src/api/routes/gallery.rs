@@ -1,11 +1,10 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
-use crate::models::File;
+use crate::models::{File, GalleryItem};
 use crate::schema::files::dsl as FilesDSL;
 use crate::schema::gallery_files::dsl as GalleryFilesDSL;
 use crate::schema::gallery_items::dsl as GalleryItemsDSL;
-use crate::state;
-use crate::state::AppState;
+use crate::state::{self, AppState};
 use actix_validated_forms::form::ValidatedForm;
 use actix_validated_forms::multipart::{MultipartFile, ValidatedMultipartForm};
 use actix_validated_forms::tempfile::NamedTempFile;
@@ -19,8 +18,7 @@ use image::jpeg::JpegEncoder;
 use image::{guess_format, DynamicImage, GenericImageView, ImageError};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::fs::remove_file;
+use std::fs::{self, remove_file};
 use std::io::BufWriter;
 use std::path::PathBuf;
 use validator::Validate;
@@ -69,6 +67,7 @@ pub async fn create_item(
     form: ValidatedMultipartForm<CreateGalleryItem>,
 ) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> {
+        // Check uploaded file is valid image
         let form = form.into_inner();
         let (img, format) = || -> Result<_, ImageError> {
             let img_bytes = fs::read(form.image.file.path()).unwrap();
@@ -86,13 +85,22 @@ pub async fn create_item(
         let res = db
             .transaction::<_, APIError, _>(|| {
                 let ext = form.image.get_extension().map(|x| x.to_owned());
-                let (id, path) = create_file(
+                let (original_file, original_path) = create_file(
                     &db,
                     form.image.file,
                     &state.settings.app.storage_folder,
                     ext,
                 )?;
-                created.push(path);
+                created.push(original_path);
+
+                let gallery_item: GalleryItem = diesel::insert_into(GalleryItemsDSL::gallery_items)
+                    .values((
+                        GalleryItemsDSL::description.eq(form.description),
+                        GalleryItemsDSL::original_file_id.eq(original_file.id),
+                        GalleryItemsDSL::position.eq("a"),
+                        GalleryItemsDSL::category.eq(form.category),
+                    ))
+                    .get_result(&db)?;
 
                 let widths: Vec<_> = IMG_WIDTHS.iter().filter(|w| **w <= img.width()).collect();
                 let smaller_imgs: Vec<(NamedTempFile, DynamicImage)> = widths
@@ -109,14 +117,22 @@ pub async fn create_item(
                     })
                     .collect();
 
-                for (file, img) in smaller_imgs {
-                    let (id, path) = create_file(
+                for (tempfile, img) in smaller_imgs {
+                    let (db_file, path) = create_file(
                         &db,
-                        file,
+                        tempfile,
                         &state.settings.app.storage_folder,
                         Some("jpeg".to_string()),
                     )?;
                     created.push(path);
+                    diesel::insert_into(GalleryFilesDSL::gallery_files)
+                        .values((
+                            GalleryFilesDSL::item_id.eq(gallery_item.id),
+                            GalleryFilesDSL::file_id.eq(db_file.id),
+                            GalleryFilesDSL::height.eq(img.height() as i32),
+                            GalleryFilesDSL::width.eq(img.width() as i32),
+                        ))
+                        .execute(&db)?;
                 }
 
                 Ok(())

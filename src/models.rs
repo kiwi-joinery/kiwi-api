@@ -66,7 +66,7 @@ pub struct GalleryFile {
     pub width: i32,
 }
 
-#[derive()]
+#[derive(Queryable, Debug, Identifiable)]
 pub struct GalleryItem {
     pub id: i32,
     pub description: Option<String>,
