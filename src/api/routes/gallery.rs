@@ -6,7 +6,8 @@ use actix_validated_forms::multipart::{MultipartFile, ValidatedMultipartForm};
 use actix_web::web::{Data, Path};
 use actix_web::{web, HttpResponse};
 use futures::TryFutureExt;
-use serde::Deserialize;
+use image::GenericImageView;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
@@ -28,10 +29,23 @@ pub async fn create_item(
     state: Data<AppState>,
     form: ValidatedMultipartForm<CreateGalleryItem>,
 ) -> Result<HttpResponse, APIError> {
-    web::block(move || -> Result<_, APIError> { Ok(()) })
-        .map_ok(ok_json)
-        .map_err(APIError::from)
-        .await
+    web::block(move || -> Result<_, APIError> {
+        let _img = image::open(form.image.file.path()).map_err(|e| APIError::BadRequest {
+            code: "BAD_IMAGE".to_string(),
+            description: Some("The image file was not valid".to_string()),
+        })?;
+        //
+        // // The dimensions method returns the images width and height.
+        // println!("dimensions {:?}", img.dimensions());
+        //
+        // // The color method returns the image's `ColorType`.
+        // println!("{:?}", img.color());
+
+        Ok(form.image.filename.clone())
+    })
+    .map_ok(ok_json)
+    .map_err(APIError::from)
+    .await
 }
 
 pub async fn delete_item(

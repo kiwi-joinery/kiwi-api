@@ -27,7 +27,7 @@ CREATE TABLE files
 (
     id SERIAL PRIMARY KEY,
     bytes BIGINT NOT NULL,
-    extension VARCHAR(255) NOT NULL
+    extension VARCHAR(255) NULL
 );
 
 CREATE TABLE gallery_items

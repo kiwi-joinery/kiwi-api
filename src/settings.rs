@@ -3,13 +3,14 @@ use lettre::smtp::authentication::Credentials;
 use lettre::{smtp, ClientSecurity, ClientTlsParameters, SmtpClient, SmtpTransport};
 use native_tls::TlsConnector;
 use serde::Deserialize;
+use url::Url;
 
 #[derive(Debug, Deserialize)]
 pub struct App {
     pub port: u16,
     pub storage: String,
     pub contact_mailbox: String,
-    pub password_reset_url: String,
+    pub password_reset_url: Url,
 }
 
 #[derive(Debug, Deserialize)]

@@ -55,16 +55,10 @@ pub async fn request(
             }
         };
 
-        let params = hashmap! {
-            "email" => &email.email,
-            "b" => &token,
-        };
-        let body = format!(
-            "Kiwi Admin Password Reset Link: \n\n\
-             {}?{}",
-            state.settings.app.password_reset_url,
-            serde_urlencoded::to_string(params).unwrap()
-        );
+        let mut url = state.settings.app.password_reset_url.clone();
+        url.query_pairs_mut().append_pair("email", &email.email);
+        url.query_pairs_mut().append_pair("token", &token);
+        let body = format!("Kiwi Admin Password Reset Link: \n\n{}", url);
 
         let email = EmailBuilder::new()
             .to(email.email.as_str())

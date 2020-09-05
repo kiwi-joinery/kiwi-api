@@ -2,7 +2,7 @@ table! {
     files (id) {
         id -> Int4,
         bytes -> Int8,
-        extension -> Varchar,
+        extension -> Nullable<Varchar>,
     }
 }
 

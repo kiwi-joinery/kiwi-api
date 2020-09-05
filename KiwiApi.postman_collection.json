@@ -17,7 +17,7 @@
 								"id": "89dee1a5-ca20-43c5-81bc-b9819affe089",
 								"exec": [
 									"var json = JSON.parse(responseBody);",
-									"if (json.response == \"SUCCESS\") {",
+									"if (pm.response.code == 200) {",
 									"    pm.environment.set(\"user_id\", json.user.id);",
 									"    pm.environment.set(\"token\", json.token);",
 									"}"
@@ -326,12 +326,11 @@
 							]
 						},
 						"url": {
-							"raw": "{{api_url}}/v1/users",
+							"raw": "{{api_url}}/users",
 							"host": [
 								"{{api_url}}"
 							],
 							"path": [
-								"v1",
 								"users"
 							]
 						}
@@ -388,12 +387,11 @@
 							]
 						},
 						"url": {
-							"raw": "{{api_url}}/v1/users/{{id}}",
+							"raw": "{{api_url}}/users/{{id}}",
 							"host": [
 								"{{api_url}}"
 							],
 							"path": [
-								"v1",
 								"users",
 								"{{id}}"
 							]
@@ -419,12 +417,11 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{api_url}}/v1/users/{{id}}",
+							"raw": "{{api_url}}/users/{{id}}",
 							"host": [
 								"{{api_url}}"
 							],
 							"path": [
-								"v1",
 								"users",
 								"{{id}}"
 							]
@@ -441,22 +438,26 @@
 				{
 					"name": "Request Reset",
 					"request": {
-						"method": "GET",
+						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "jacob@jhalsey.com",
+									"type": "text"
+								}
+							]
+						},
 						"url": {
-							"raw": "{{api_url}}/v1/password_reset?email",
+							"raw": "{{api_url}}/password_reset/request",
 							"host": [
 								"{{api_url}}"
 							],
 							"path": [
-								"v1",
-								"password_reset"
-							],
-							"query": [
-								{
-									"key": "email",
-									"value": null
-								}
+								"password_reset",
+								"request"
 							]
 						}
 					},
@@ -479,24 +480,29 @@
 							"urlencoded": [
 								{
 									"key": "token",
-									"value": "",
+									"value": "a",
 									"type": "text"
 								},
 								{
-									"key": "password",
-									"value": "",
+									"key": "new_password",
+									"value": "password",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "a",
 									"type": "text"
 								}
 							]
 						},
 						"url": {
-							"raw": "{{api_url}}/v1/password_reset",
+							"raw": "{{api_url}}/password_reset/submit",
 							"host": [
 								"{{api_url}}"
 							],
 							"path": [
-								"v1",
-								"password_reset"
+								"password_reset",
+								"submit"
 							],
 							"query": [
 								{
@@ -530,7 +536,7 @@
 								},
 								{
 									"key": "email",
-									"value": "reply",
+									"value": "jacob@jhalsey.com",
 									"type": "text"
 								},
 								{
@@ -547,6 +553,49 @@
 							],
 							"path": [
 								"contact"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "gallery",
+			"item": [
+				{
+					"name": "Create Item",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "description",
+									"value": "New photo\n",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "STAIRS",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": "/C:/Users/jacob/IdeaProjects/kiwi-api/Cargo.lock"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{api_url}}/gallery",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"gallery"
 							]
 						}
 					},

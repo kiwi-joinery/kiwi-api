@@ -110,6 +110,14 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                             .with_interval(Duration::from_secs(120))
                             .with_max_requests(3),
                     ),
+            )
+            .service(
+                scope("gallery").service(
+                    resource("")
+                        .route(web::get().to(routes::gallery::list))
+                        .route(web::post().to(routes::gallery::create_item))
+                        .wrap(auth_mw.clone()),
+                ),
             ),
     );
 }

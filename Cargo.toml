@@ -31,5 +31,5 @@ lettre = "0.9"
 lettre_email = "0.9"
 linkify = "0.4.0"
 native-tls = "0.2"
-serde_urlencoded = "0.6.1"
-maplit = "1.0.2"
+image = "0.23.9"
+url = { version = "2.1.1", features = ["serde"] }
