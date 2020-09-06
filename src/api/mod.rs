@@ -1,5 +1,6 @@
 mod auth;
 mod errors;
+mod files;
 mod routes;
 mod token;
 

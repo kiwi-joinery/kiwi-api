@@ -18,7 +18,7 @@ pub struct App {
 }
 
 fn validate_folder_path(path: &Box<Path>) -> Result<(), ValidationError> {
-    std::fs::create_dir_all(path).map_err(|e| ValidationError::new("invalid folder path"))?;
+    std::fs::create_dir_all(path).map_err(|_| ValidationError::new("invalid folder path"))?;
     Ok(())
 }
 

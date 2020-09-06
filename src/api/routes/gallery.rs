@@ -4,7 +4,7 @@ use crate::models::{File, GalleryFile, GalleryItem};
 use crate::schema::files::dsl as Files;
 use crate::schema::gallery_files::dsl as GalleryFiles;
 use crate::schema::gallery_items::dsl as GalleryItems;
-use crate::state::{self, AppState};
+use crate::state::AppState;
 use actix_validated_forms::form::ValidatedForm;
 use actix_validated_forms::multipart::{
     MultipartFile, MultipartTypeFromString, ValidatedMultipartForm,
@@ -17,14 +17,12 @@ use diesel::Connection;
 use futures::TryFutureExt;
 use image::imageops::FilterType;
 use image::jpeg::JpegEncoder;
-use image::{guess_format, DynamicImage, GenericImageView, ImageError};
+use image::{DynamicImage, GenericImageView};
 use itertools::Itertools;
 use rayon::prelude::*;
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
-use std::fs::{self, remove_file};
 use std::io::BufWriter;
-use std::path::PathBuf;
 use std::str::FromStr;
 use url::Url;
 use validator::Validate;
@@ -46,15 +44,6 @@ pub struct GalleryFileResponse {
     bytes: i64,
 }
 
-fn create_file_url(settings: &crate::settings::Settings, file: &File) -> Url {
-    let mut s = format!("files/{}", file.id);
-    match file.extension.as_ref() {
-        None => {}
-        Some(e) => s.push_str(format!(".{}", e).as_str()),
-    }
-    settings.app.api_url.join(s.as_str()).unwrap()
-}
-
 pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
@@ -71,7 +60,7 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
                 match f {
                     None => {}
                     Some((g, f)) => files.push(GalleryFileResponse {
-                        url: create_file_url(&state.settings, f),
+                        url: f.get_public_url(&state.settings),
                         height: g.height,
                         width: g.width,
                         bytes: f.bytes,
@@ -110,26 +99,6 @@ pub struct CreateGalleryItem {
     image: MultipartFile,
 }
 
-fn create_file<P: AsRef<std::path::Path>>(
-    db: &state::Connection,
-    input: NamedTempFile,
-    destination: P,
-    extension: Option<String>,
-) -> Result<(File, PathBuf), APIError> {
-    let size = input.as_file().metadata().unwrap().len();
-    let f: File = diesel::insert_into(Files::files)
-        .values((
-            Files::bytes.eq(size as i64),
-            Files::extension.eq(&extension),
-        ))
-        .get_result(db)?;
-    let mut new_name = destination.as_ref().canonicalize().unwrap().to_path_buf();
-    new_name.push(f.id.to_string());
-    extension.map(|e| new_name.set_extension(e));
-    input.persist_noclobber(&new_name).unwrap();
-    Ok((f, new_name))
-}
-
 // https://support.squarespace.com/hc/en-us/articles/206542517-Formatting-your-images-for-display-on-the-web
 static IMG_WIDTHS: [u32; 7] = [100, 300, 500, 750, 1000, 1500, 2500];
 const JPEG_QUALITY: u8 = 80;
@@ -141,13 +110,8 @@ pub async fn create_item(
     web::block(move || -> Result<_, APIError> {
         // Check uploaded file is valid image
         let form = form.into_inner();
-        let img = || -> Result<_, ImageError> {
-            let img_bytes = fs::read(form.image.file.path()).unwrap();
-            let format = guess_format(&img_bytes)?;
-            let img = image::load_from_memory(&img_bytes)?;
-            Ok(img)
-        }()
-        .map_err(|_| APIError::BadRequest {
+        let img_bytes = std::fs::read(form.image.file.path()).unwrap();
+        let img = image::load_from_memory(&img_bytes).map_err(|_| APIError::BadRequest {
             code: "BAD_IMAGE".to_string(),
             description: Some("The image file was not valid".to_string()),
         })?;
@@ -157,18 +121,14 @@ pub async fn create_item(
         let gallery_item_id = db
             .transaction::<_, APIError, _>(|| {
                 let ext = form.image.get_extension().map(|x| x.to_owned());
-                let (original_file, original_path) = create_file(
-                    &db,
-                    form.image.file,
-                    &state.settings.app.storage_folder,
-                    ext,
-                )?;
-                created.push(original_path);
+                let original_file = File::create(&db, &state.settings, form.image.file, ext)?;
+                let original_file_id = original_file.id;
+                created.push(original_file);
 
                 let gallery_item: GalleryItem = diesel::insert_into(GalleryItems::gallery_items)
                     .values((
                         GalleryItems::description.eq(form.description),
-                        GalleryItems::original_file_id.eq(original_file.id),
+                        GalleryItems::original_file_id.eq(original_file_id),
                         GalleryItems::position.eq("a"),
                         GalleryItems::category.eq(form.category.to_string()),
                     ))
@@ -190,17 +150,14 @@ pub async fn create_item(
                     .collect();
 
                 for (tempfile, img) in smaller_imgs {
-                    let (db_file, path) = create_file(
-                        &db,
-                        tempfile,
-                        &state.settings.app.storage_folder,
-                        Some("jpg".to_string()),
-                    )?;
-                    created.push(path);
+                    let db_file =
+                        File::create(&db, &state.settings, tempfile, Some("jpg".to_string()))?;
+                    let db_file_id = db_file.id;
+                    created.push(db_file);
                     diesel::insert_into(GalleryFiles::gallery_files)
                         .values(&GalleryFile {
                             item_id: gallery_item.id,
-                            file_id: db_file.id,
+                            file_id: db_file_id,
                             height: img.height() as i32,
                             width: img.width() as i32,
                         })
@@ -209,8 +166,8 @@ pub async fn create_item(
                 Ok(gallery_item.id)
             })
             .map_err(|e| {
-                created.iter().for_each(|f| {
-                    remove_file(f.as_path()).unwrap();
+                created.into_iter().for_each(|f| {
+                    f.delete_from_disk(&state.settings);
                 });
                 e
             })?;
