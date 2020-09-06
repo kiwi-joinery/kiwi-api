@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         App::new()
             .data(state.clone())
             .wrap(middleware::Logger::default())
-            .configure(api::configure)
+            .configure(|c| api::configure(c, state.clone()))
     })
     .bind(address)?
     .run()

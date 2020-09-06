@@ -5,6 +5,7 @@ mod token;
 
 use crate::api::errors::APIError;
 use crate::state::AppState;
+use actix_files::Files;
 use actix_ratelimit::{MemoryStore, MemoryStoreActor, RateLimiter};
 use actix_validated_forms::form::ValidatedFormConfig;
 use actix_validated_forms::multipart::ValidatedMultipartFormConfig;
@@ -31,7 +32,7 @@ async fn index(_state: Data<AppState>) -> String {
     format!("Kiwi API")
 }
 
-pub fn configure(cfg: &mut web::ServiceConfig) {
+pub fn configure(cfg: &mut web::ServiceConfig, state: AppState) {
     let auth_mw = HttpAuthentication::basic(auth::validator);
     let rl_store = MemoryStore::new();
     cfg.service(
@@ -118,7 +119,17 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                         .route(web::post().to(routes::gallery::create_item))
                         .wrap(auth_mw.clone()),
                 ),
-            ),
+            )
+            .service(Files::new(
+                "/files",
+                state
+                    .settings
+                    .app
+                    .storage_folder
+                    .canonicalize()
+                    .unwrap()
+                    .as_os_str(),
+            )),
     );
 }
 

@@ -6,7 +6,9 @@ use crate::schema::gallery_files::dsl as GalleryFilesDSL;
 use crate::schema::gallery_items::dsl as GalleryItemsDSL;
 use crate::state::{self, AppState};
 use actix_validated_forms::form::ValidatedForm;
-use actix_validated_forms::multipart::{MultipartFile, ValidatedMultipartForm};
+use actix_validated_forms::multipart::{
+    MultipartFile, MultipartTypeFromString, ValidatedMultipartForm,
+};
 use actix_validated_forms::tempfile::NamedTempFile;
 use actix_web::web::{Data, Path};
 use actix_web::{web, HttpResponse};
@@ -17,10 +19,12 @@ use image::imageops::FilterType;
 use image::jpeg::JpegEncoder;
 use image::{guess_format, DynamicImage, GenericImageView, ImageError};
 use rayon::prelude::*;
+use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, remove_file};
 use std::io::BufWriter;
 use std::path::PathBuf;
+use std::str::FromStr;
 use validator::Validate;
 
 pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
@@ -30,11 +34,19 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
         .await
 }
 
+#[derive(Debug, Deserialize)]
+enum Category {
+    Staircases,
+    Windows,
+    Doors,
+    Other,
+}
+
 #[derive(Debug, FromMultipart, Validate)]
 pub struct CreateGalleryItem {
     #[validate(length(max = 4096))]
     description: Option<String>,
-    category: String,
+    category: Category,
     image: MultipartFile,
 }
 
@@ -98,7 +110,7 @@ pub async fn create_item(
                         GalleryItemsDSL::description.eq(form.description),
                         GalleryItemsDSL::original_file_id.eq(original_file.id),
                         GalleryItemsDSL::position.eq("a"),
-                        GalleryItemsDSL::category.eq(form.category),
+                        GalleryItemsDSL::category.eq(form.category.to_string()),
                     ))
                     .get_result(&db)?;
 
@@ -177,4 +189,29 @@ pub async fn update_item(
         .map_ok(ok_json)
         .map_err(APIError::from)
         .await
+}
+
+impl MultipartTypeFromString for Category {}
+impl FromStr for Category {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "STAIRCASES" => Ok(Self::Staircases),
+            "WINDOWS" => Ok(Self::Windows),
+            "DOORS" => Ok(Self::Doors),
+            "OTHER" => Ok(Self::Other),
+            _ => Err(()),
+        }
+    }
+}
+
+impl std::fmt::Display for Category {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Category::Staircases => f.write_str("STAIRCASES"),
+            Category::Windows => f.write_str("WINDOWS"),
+            Category::Doors => f.write_str("DOORS"),
+            Category::Other => f.write_str("OTHER"),
+        }
+    }
 }
