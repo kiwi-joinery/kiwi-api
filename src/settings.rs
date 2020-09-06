@@ -14,6 +14,7 @@ pub struct App {
     pub storage_folder: Box<Path>,
     pub contact_mailbox: String,
     pub password_reset_url: Url,
+    pub api_url: Url,
 }
 
 fn validate_folder_path(path: &Box<Path>) -> Result<(), ValidationError> {

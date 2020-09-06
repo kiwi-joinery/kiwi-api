@@ -40,10 +40,19 @@ pub struct GalleryItemResponse {
 
 #[derive(Serialize)]
 pub struct GalleryFileResponse {
-    url: i32,
+    url: Url,
     height: i32,
     width: i32,
     bytes: i64,
+}
+
+fn create_file_url(settings: &crate::settings::Settings, file: &File) -> Url {
+    let mut s = format!("files/{}", file.id);
+    match file.extension.as_ref() {
+        None => {}
+        Some(e) => s.push_str(format!(".{}", e).as_str()),
+    }
+    settings.app.api_url.join(s.as_str()).unwrap()
 }
 
 pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
@@ -62,7 +71,7 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
                 match f {
                     None => {}
                     Some((g, f)) => files.push(GalleryFileResponse {
-                        url: g.file_id,
+                        url: create_file_url(&state.settings, f),
                         height: g.height,
                         width: g.width,
                         bytes: f.bytes,
@@ -185,7 +194,7 @@ pub async fn create_item(
                         &db,
                         tempfile,
                         &state.settings.app.storage_folder,
-                        Some("jpeg".to_string()),
+                        Some("jpg".to_string()),
                     )?;
                     created.push(path);
                     diesel::insert_into(GalleryFiles::gallery_files)
