@@ -1,9 +1,9 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
 use crate::models::{File, GalleryFile, GalleryItem};
-use crate::schema::files::dsl as FilesDSL;
-use crate::schema::gallery_files::dsl as GalleryFilesDSL;
-use crate::schema::gallery_items::dsl as GalleryItemsDSL;
+use crate::schema::files::dsl as Files;
+use crate::schema::gallery_files::dsl as GalleryFiles;
+use crate::schema::gallery_items::dsl as GalleryItems;
 use crate::state::{self, AppState};
 use actix_validated_forms::form::ValidatedForm;
 use actix_validated_forms::multipart::{
@@ -18,6 +18,7 @@ use futures::TryFutureExt;
 use image::imageops::FilterType;
 use image::jpeg::JpegEncoder;
 use image::{guess_format, DynamicImage, GenericImageView, ImageError};
+use itertools::Itertools;
 use rayon::prelude::*;
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
@@ -25,16 +26,66 @@ use std::fs::{self, remove_file};
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::str::FromStr;
+use url::Url;
 use validator::Validate;
 
-pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
-    web::block(move || -> Result<_, APIError> { Ok(()) })
-        .map_ok(ok_json)
-        .map_err(APIError::from)
-        .await
+#[derive(Serialize)]
+pub struct GalleryItemResponse {
+    pub id: i32,
+    pub description: Option<String>,
+    pub position: String,
+    pub category: String,
+    pub files: Vec<GalleryFileResponse>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Serialize)]
+pub struct GalleryFileResponse {
+    url: i32,
+    height: i32,
+    width: i32,
+    bytes: i64,
+}
+
+pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<_, APIError> {
+        let db = state.new_connection();
+
+        let items: Vec<(GalleryItem, Option<(GalleryFile, File)>)> = GalleryItems::gallery_items
+            .left_join(GalleryFiles::gallery_files.inner_join(Files::files))
+            .get_results(&db)?;
+
+        let mut output = Vec::new();
+        for (_, group) in &items.into_iter().group_by(|x| x.0.id) {
+            let mut files = Vec::new();
+            let group = group.collect_vec();
+            for (_, f) in &group {
+                match f {
+                    None => {}
+                    Some((g, f)) => files.push(GalleryFileResponse {
+                        url: g.file_id,
+                        height: g.height,
+                        width: g.width,
+                        bytes: f.bytes,
+                    }),
+                }
+            }
+            let first = &group.first().unwrap().0;
+            output.push(GalleryItemResponse {
+                id: first.id,
+                description: first.description.clone(),
+                position: first.position.clone(),
+                category: first.category.clone(),
+                files,
+            });
+        }
+        Ok(output)
+    })
+    .map_ok(ok_json)
+    .map_err(APIError::from)
+    .await
+}
+
+#[derive(Debug, Serialize)]
 enum Category {
     Staircases,
     Windows,
@@ -57,10 +108,10 @@ fn create_file<P: AsRef<std::path::Path>>(
     extension: Option<String>,
 ) -> Result<(File, PathBuf), APIError> {
     let size = input.as_file().metadata().unwrap().len();
-    let f: File = diesel::insert_into(FilesDSL::files)
+    let f: File = diesel::insert_into(Files::files)
         .values((
-            FilesDSL::bytes.eq(size as i64),
-            FilesDSL::extension.eq(&extension),
+            Files::bytes.eq(size as i64),
+            Files::extension.eq(&extension),
         ))
         .get_result(db)?;
     let mut new_name = destination.as_ref().canonicalize().unwrap().to_path_buf();
@@ -105,12 +156,12 @@ pub async fn create_item(
                 )?;
                 created.push(original_path);
 
-                let gallery_item: GalleryItem = diesel::insert_into(GalleryItemsDSL::gallery_items)
+                let gallery_item: GalleryItem = diesel::insert_into(GalleryItems::gallery_items)
                     .values((
-                        GalleryItemsDSL::description.eq(form.description),
-                        GalleryItemsDSL::original_file_id.eq(original_file.id),
-                        GalleryItemsDSL::position.eq("a"),
-                        GalleryItemsDSL::category.eq(form.category.to_string()),
+                        GalleryItems::description.eq(form.description),
+                        GalleryItems::original_file_id.eq(original_file.id),
+                        GalleryItems::position.eq("a"),
+                        GalleryItems::category.eq(form.category.to_string()),
                     ))
                     .get_result(&db)?;
 
@@ -137,7 +188,7 @@ pub async fn create_item(
                         Some("jpeg".to_string()),
                     )?;
                     created.push(path);
-                    diesel::insert_into(GalleryFilesDSL::gallery_files)
+                    diesel::insert_into(GalleryFiles::gallery_files)
                         .values(&GalleryFile {
                             item_id: gallery_item.id,
                             file_id: db_file.id,
@@ -166,10 +217,28 @@ pub async fn delete_item(
     state: Data<AppState>,
     item_id: Path<i32>,
 ) -> Result<HttpResponse, APIError> {
-    web::block(move || -> Result<_, APIError> { Ok(()) })
-        .map_ok(ok_json)
-        .map_err(APIError::from)
-        .await
+    web::block(move || -> Result<_, APIError> {
+        let db = state.new_connection();
+        let item: Vec<(GalleryItem, Option<GalleryFile>, Option<File>)> =
+            GalleryItems::gallery_items
+                .find(item_id.into_inner())
+                .left_join(GalleryFiles::gallery_files)
+                .left_join(Files::files)
+                .get_results(&db)?;
+
+        // db.transaction::<_, APIError, _>(|| {
+        //     diesel::delete(GalleryFiles::gallery_files.filter(GalleryFiles::item_id.eq(item.id)))
+        //         .execute(&db)?;
+        //     diesel::delete(GalleryItems::gallery_items.filter(GalleryItems::id.eq(item.id)))
+        //         .execute(&db)?;
+        //
+        //     Ok(())
+        // });
+        Ok(())
+    })
+    .map_ok(ok_json)
+    .map_err(APIError::from)
+    .await
 }
 
 #[derive(Debug, Deserialize, Validate)]

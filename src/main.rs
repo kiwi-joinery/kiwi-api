@@ -13,7 +13,7 @@ extern crate validator_derive;
 extern crate diesel_migrations;
 embed_migrations!();
 #[macro_use]
-extern crate actix_validated_forms_derive;
+extern crate actix_validated_forms;
 
 use actix_web::{middleware, App, HttpServer};
 use diesel::prelude::*;

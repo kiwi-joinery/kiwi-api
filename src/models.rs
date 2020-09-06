@@ -7,6 +7,8 @@ use crate::schema::*;
 use chrono::offset::Utc;
 use chrono::DateTime;
 
+use serde::Serialize;
+
 // https://github.com/diesel-rs/diesel/blob/master/guide_drafts/trait_derives.md#identifiable
 // Note that Identifiable assumes: #[primary_key(id)]
 
@@ -50,15 +52,16 @@ pub struct NewSession {
     pub user_agent: String,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Serialize)]
 pub struct File {
     pub id: i32,
     pub bytes: i64,
     pub extension: Option<String>,
 }
 
-#[derive(Queryable, Debug, Identifiable, Insertable)]
+#[derive(Queryable, Debug, Identifiable, Insertable, Associations, Serialize)]
 #[primary_key(item_id, file_id)]
+#[belongs_to(GalleryItem, foreign_key = "item_id")]
 pub struct GalleryFile {
     pub item_id: i32,
     pub file_id: i32,
@@ -66,7 +69,7 @@ pub struct GalleryFile {
     pub width: i32,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Associations, Serialize)]
 pub struct GalleryItem {
     pub id: i32,
     pub description: Option<String>,
