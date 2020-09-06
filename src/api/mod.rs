@@ -114,12 +114,18 @@ pub fn configure(cfg: &mut web::ServiceConfig, state: AppState) {
                     ),
             )
             .service(
-                scope("gallery").service(
-                    resource("")
-                        .route(web::get().to(routes::gallery::list))
-                        .route(web::post().to(routes::gallery::create_item))
-                        .wrap(auth_mw.clone()),
-                ),
+                scope("gallery")
+                    .service(
+                        resource("")
+                            .route(web::get().to(routes::gallery::list))
+                            .route(web::post().to(routes::gallery::create_item))
+                            .wrap(auth_mw.clone()),
+                    )
+                    .service(
+                        resource("{item_id}")
+                            .route(web::put().to(routes::gallery::update_item))
+                            .route(web::delete().to(routes::gallery::delete_item)),
+                    ),
             )
             .service(Files::new(
                 "/files",

@@ -185,21 +185,39 @@ pub async fn delete_item(
 ) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
-        let item: Vec<(GalleryItem, Option<GalleryFile>, Option<File>)> =
-            GalleryItems::gallery_items
-                .find(item_id.into_inner())
-                .left_join(GalleryFiles::gallery_files)
-                .left_join(Files::files)
-                .get_results(&db)?;
+        let (item, original_file): (GalleryItem, File) = GalleryItems::gallery_items
+            .find(item_id.into_inner())
+            .inner_join(Files::files)
+            .get_result(&db)?;
 
-        // db.transaction::<_, APIError, _>(|| {
-        //     diesel::delete(GalleryFiles::gallery_files.filter(GalleryFiles::item_id.eq(item.id)))
-        //         .execute(&db)?;
-        //     diesel::delete(GalleryItems::gallery_items.filter(GalleryItems::id.eq(item.id)))
-        //         .execute(&db)?;
-        //
-        //     Ok(())
-        // });
+        let mut files: Vec<File> = GalleryItems::gallery_items
+            .find(item.id)
+            .inner_join(GalleryFiles::gallery_files.inner_join(Files::files))
+            .get_results::<(GalleryItem, (GalleryFile, File))>(&db)?
+            .into_iter()
+            .map(|(_, (_, f))| f)
+            .collect_vec();
+        files.push(original_file);
+
+        db.transaction::<_, APIError, _>(|| {
+            // Delete gallery file mappings
+            diesel::delete(GalleryFiles::gallery_files.filter(GalleryFiles::item_id.eq(item.id)))
+                .execute(&db)?;
+            // Delete gallery item
+            diesel::delete(GalleryItems::gallery_items.filter(GalleryItems::id.eq(item.id)))
+                .execute(&db)?;
+            // Delete file records
+            for f in files.iter() {
+                diesel::delete(Files::files.filter(Files::id.eq(f.id))).execute(&db)?;
+            }
+            Ok(())
+        })?;
+
+        // Delete files from disk
+        files.into_iter().for_each(|f| {
+            f.delete_from_disk(&state.settings);
+        });
+
         Ok(())
     })
     .map_ok(ok_json)
