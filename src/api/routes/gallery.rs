@@ -1,6 +1,6 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
-use crate::models::{File, GalleryFile, GalleryItem};
+use crate::models::{File, GalleryFile, GalleryItem, GalleryItemChange};
 use crate::schema::files::dsl as Files;
 use crate::schema::gallery_files::dsl as GalleryFiles;
 use crate::schema::gallery_items::dsl as GalleryItems;
@@ -22,6 +22,7 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::BufWriter;
 use std::str::FromStr;
 use url::Url;
@@ -30,7 +31,7 @@ use validator::Validate;
 #[derive(Serialize)]
 pub struct GalleryItemResponse {
     pub id: i32,
-    pub description: Option<String>,
+    pub description: String,
     pub position: String,
     pub category: String,
     pub files: Vec<GalleryFileResponse>,
@@ -50,9 +51,10 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
 
         let items: Vec<(GalleryItem, Option<(GalleryFile, File)>)> = GalleryItems::gallery_items
             .left_join(GalleryFiles::gallery_files.inner_join(Files::files))
+            .order(GalleryItems::position.asc())
             .get_results(&db)?;
 
-        let mut output = Vec::new();
+        let mut grouped_by_image = Vec::new();
         for (_, group) in &items.into_iter().group_by(|x| x.0.id) {
             let mut files = Vec::new();
             let group = group.collect_vec();
@@ -68,7 +70,7 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
                 }
             }
             let first = &group.first().unwrap().0;
-            output.push(GalleryItemResponse {
+            grouped_by_image.push(GalleryItemResponse {
                 id: first.id,
                 description: first.description.clone(),
                 position: first.position.clone(),
@@ -76,14 +78,22 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
                 files,
             });
         }
-        Ok(output)
+
+        let mut grouped_by_category = HashMap::new();
+        for (category, group) in &grouped_by_image
+            .into_iter()
+            .group_by(|x| x.category.clone())
+        {
+            grouped_by_category.insert(category, group.collect_vec());
+        }
+        Ok(grouped_by_category)
     })
     .map_ok(ok_json)
     .map_err(APIError::from)
     .await
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 enum Category {
     Staircases,
     Windows,
@@ -94,7 +104,7 @@ enum Category {
 #[derive(Debug, FromMultipart, Validate)]
 pub struct CreateGalleryItem {
     #[validate(length(max = 4096))]
-    description: Option<String>,
+    description: String,
     category: Category,
     image: MultipartFile,
 }
@@ -228,8 +238,8 @@ pub async fn delete_item(
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateGalleryItem {
     #[validate(length(max = 4096))]
-    description: Option<String>,
-    category: String,
+    description: String,
+    category: Category,
     after_id: Option<i32>,
 }
 
@@ -238,10 +248,24 @@ pub async fn update_item(
     item_id: Path<i32>,
     form: ValidatedForm<UpdateGalleryItem>,
 ) -> Result<HttpResponse, APIError> {
-    web::block(move || -> Result<_, APIError> { Ok(()) })
-        .map_ok(ok_json)
-        .map_err(APIError::from)
-        .await
+    web::block(move || -> Result<_, APIError> {
+        let db = state.new_connection();
+        let target = GalleryItems::gallery_items.filter(GalleryItems::id.eq(item_id.into_inner()));
+        let query = diesel::update(target)
+            .set(&GalleryItemChange {
+                description: form.description.clone(),
+                position: None,
+                category: form.category.to_string(),
+            })
+            .execute(&db)?;
+        if query < 1 {
+            return Err(APIError::NotFound);
+        }
+        Ok(())
+    })
+    .map_ok(ok_json)
+    .map_err(APIError::from)
+    .await
 }
 
 impl MultipartTypeFromString for Category {}

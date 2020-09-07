@@ -18,7 +18,7 @@ table! {
 table! {
     gallery_items (id) {
         id -> Int4,
-        description -> Nullable<Varchar>,
+        description -> Varchar,
         original_file_id -> Int4,
         position -> Varchar,
         category -> Varchar,

@@ -72,8 +72,16 @@ pub struct GalleryFile {
 #[derive(Queryable, Debug, Identifiable, Associations, Serialize)]
 pub struct GalleryItem {
     pub id: i32,
-    pub description: Option<String>,
+    pub description: String,
     pub original_file_id: i32,
     pub position: String,
+    pub category: String,
+}
+
+#[derive(Debug, AsChangeset)]
+#[table_name = "gallery_items"]
+pub struct GalleryItemChange {
+    pub description: String,
+    pub position: Option<String>,
     pub category: String,
 }

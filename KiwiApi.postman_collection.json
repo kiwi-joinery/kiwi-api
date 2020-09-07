@@ -433,7 +433,7 @@
 			"protocolProfileBehavior": {}
 		},
 		{
-			"name": "password",
+			"name": "password_reset",
 			"item": [
 				{
 					"name": "Request Reset",
@@ -574,18 +574,18 @@
 							"formdata": [
 								{
 									"key": "description",
-									"value": "New photo\n",
+									"value": "Wallpaper",
 									"type": "text"
 								},
 								{
 									"key": "category",
-									"value": "STAIRS",
+									"value": "STAIRCASES",
 									"type": "text"
 								},
 								{
 									"key": "image",
 									"type": "file",
-									"src": "/C:/Users/jacob/IdeaProjects/kiwi-api/Cargo.lock"
+									"src": "/C:/Users/jacob/Pictures/Windows 8 Wallpaper.jpg"
 								}
 							]
 						},
@@ -596,6 +596,77 @@
 							],
 							"path": [
 								"gallery"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Gallery",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "description",
+									"value": "Wallpaper",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "STAIRCASES",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": "/C:/Users/jacob/Pictures/Windows 8 Wallpaper.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{api_url}}/gallery/list",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"gallery",
+								"list"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Gallery Item",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "4bebe8c9-2f4e-45e8-983b-2f75095caaa6",
+								"exec": [
+									"pm.variables.set(\"id\", \"3\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/gallery/{{id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"gallery",
+								"{{id}}"
 							]
 						}
 					},
