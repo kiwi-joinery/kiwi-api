@@ -22,13 +22,36 @@ pub struct ResetRequest {
     email: String,
 }
 
+pub fn send_reset_email(
+    settings: &crate::settings::Settings,
+    email: &str,
+    token: &str,
+) -> Result<(), APIError> {
+    let mut mailer = settings.mailer.smtp_transport()?;
+
+    let mut url = settings.app.password_reset_url.clone();
+    url.query_pairs_mut().append_pair("email", email);
+    url.query_pairs_mut().append_pair("token", token);
+    let body = format!("Kiwi Admin Password Reset Link: \n\n{}", url);
+
+    let email = EmailBuilder::new()
+        .to(email)
+        .from(settings.mailer.get_from_address())
+        .reply_to("noreply@kiwijoinerydevon.co.uk")
+        .subject("Kiwi Website Password Reset")
+        .body(body)
+        .build()
+        .unwrap();
+    mailer.send(email.into())?;
+    Ok(())
+}
+
 pub async fn request(
     state: Data<AppState>,
     email: ValidatedForm<ResetRequest>,
 ) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
-        let mut mailer = state.settings.mailer.smtp_transport()?;
 
         let user: User = match U::users
             .filter(U::email.eq(&email.email))
@@ -55,20 +78,7 @@ pub async fn request(
             }
         };
 
-        let mut url = state.settings.app.password_reset_url.clone();
-        url.query_pairs_mut().append_pair("email", &email.email);
-        url.query_pairs_mut().append_pair("token", &token);
-        let body = format!("Kiwi Admin Password Reset Link: \n\n{}", url);
-
-        let email = EmailBuilder::new()
-            .to(email.email.as_str())
-            .from(state.settings.mailer.get_from_address())
-            .reply_to("noreply@kiwijoinerydevon.co.uk")
-            .subject("Kiwi Website Password Reset")
-            .body(body)
-            .build()
-            .unwrap();
-        mailer.send(email.into())?;
+        send_reset_email(&state.settings, &email.email, &token)?;
 
         Ok(())
     })

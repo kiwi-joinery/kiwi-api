@@ -1,6 +1,7 @@
 use crate::api::auth::AuthenticatedUser;
 use crate::api::errors::APIError;
 use crate::api::ok_json;
+use crate::api::routes::password_reset::send_reset_email;
 use crate::api::routes::session::AUTH_TOKEN_BYTES;
 use crate::api::token::generate_token;
 use crate::ext::postgres::functions::strpos;
@@ -120,21 +121,19 @@ pub async fn create(
         assert_email_available(&db, &form.email)?;
 
         let reset = generate_token(AUTH_TOKEN_BYTES);
-
         let insert = NewUser {
             name: form.name.clone(),
             email: form.email.clone(),
             password_hash: None,
-            password_reset_token: Some(reset),
+            password_reset_token: Some(reset.clone()),
         };
-
         let user: User = diesel::insert_into(U::users)
             .values(&insert)
             .get_result(&db)?;
 
-        if insert.password_reset_token.is_some() {
-            //TODO: Email
-            println!("Send email");
+        match send_reset_email(&state.settings, &user.email, &reset) {
+            Ok(_) => {}
+            Err(e) => log::warn!("Unable to send reset email on account creation: {}", e),
         }
 
         Ok(user.into())
