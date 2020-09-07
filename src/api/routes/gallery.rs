@@ -32,7 +32,6 @@ use validator::Validate;
 pub struct GalleryItemResponse {
     pub id: i32,
     pub description: String,
-    pub position: String,
     pub category: String,
     pub files: Vec<GalleryFileResponse>,
 }
@@ -51,7 +50,7 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
 
         let items: Vec<(GalleryItem, Option<(GalleryFile, File)>)> = GalleryItems::gallery_items
             .left_join(GalleryFiles::gallery_files.inner_join(Files::files))
-            .order(GalleryItems::position.asc())
+            .order((GalleryItems::position.asc(), GalleryFiles::width.asc()))
             .get_results(&db)?;
 
         let mut grouped_by_image = Vec::new();
@@ -73,7 +72,6 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
             grouped_by_image.push(GalleryItemResponse {
                 id: first.id,
                 description: first.description.clone(),
-                position: first.position.clone(),
                 category: first.category.clone(),
                 files,
             });
@@ -128,59 +126,66 @@ pub async fn create_item(
 
         let db = state.new_connection();
         let mut created = Vec::new();
-        let gallery_item_id = db
-            .transaction::<_, APIError, _>(|| {
-                let ext = form.image.get_extension().map(|x| x.to_owned());
-                let original_file = File::create(&db, &state.settings, form.image.file, ext)?;
-                let original_file_id = original_file.id;
-                created.push(original_file);
+        db.transaction::<_, APIError, _>(|| {
+            let ext = form.image.get_extension().map(|x| x.to_owned());
+            let original_file = File::create(&db, &state.settings, form.image.file, ext)?;
+            let original_file_id = original_file.id;
+            created.push(original_file);
 
-                let gallery_item: GalleryItem = diesel::insert_into(GalleryItems::gallery_items)
-                    .values((
-                        GalleryItems::description.eq(form.description),
-                        GalleryItems::original_file_id.eq(original_file_id),
-                        GalleryItems::position.eq("a"),
-                        GalleryItems::category.eq(form.category.to_string()),
-                    ))
-                    .get_result(&db)?;
+            let gallery_item: GalleryItem = diesel::insert_into(GalleryItems::gallery_items)
+                .values((
+                    GalleryItems::description.eq(form.description),
+                    GalleryItems::original_file_id.eq(original_file_id),
+                    GalleryItems::position.eq("a"),
+                    GalleryItems::category.eq(form.category.to_string()),
+                ))
+                .get_result(&db)?;
 
-                let widths: Vec<_> = IMG_WIDTHS.iter().filter(|w| **w <= img.width()).collect();
-                let smaller_imgs: Vec<(NamedTempFile, DynamicImage)> = widths
-                    .par_iter()
-                    .map(|width| {
-                        let resized = img.resize(**width, img.height(), FilterType::Triangle);
-                        let tempf = NamedTempFile::new().unwrap();
-                        let mut fout = BufWriter::new(tempf.as_file());
-                        let mut encoder = JpegEncoder::new_with_quality(&mut fout, JPEG_QUALITY);
-                        encoder.encode_image(&resized).unwrap();
-                        drop(encoder);
-                        drop(fout);
-                        (tempf, resized)
+            let mut widths: Vec<u32> = IMG_WIDTHS
+                .to_vec()
+                .into_iter()
+                .filter(|w| w <= &img.width())
+                .collect();
+            if *widths.iter().max().unwrap_or(&(0 as u32)) < img.width() {
+                widths.push(img.width())
+            }
+
+            let smaller_imgs: Vec<(NamedTempFile, DynamicImage)> = widths
+                .par_iter()
+                .map(|width| {
+                    let resized = img.resize(*width, img.height(), FilterType::Triangle);
+                    let tempf = NamedTempFile::new().unwrap();
+                    let mut fout = BufWriter::new(tempf.as_file());
+                    let mut encoder = JpegEncoder::new_with_quality(&mut fout, JPEG_QUALITY);
+                    encoder.encode_image(&resized).unwrap();
+                    drop(encoder);
+                    drop(fout);
+                    (tempf, resized)
+                })
+                .collect();
+
+            for (tempfile, img) in smaller_imgs {
+                let db_file =
+                    File::create(&db, &state.settings, tempfile, Some("jpg".to_string()))?;
+                let db_file_id = db_file.id;
+                created.push(db_file);
+                diesel::insert_into(GalleryFiles::gallery_files)
+                    .values(&GalleryFile {
+                        item_id: gallery_item.id,
+                        file_id: db_file_id,
+                        height: img.height() as i32,
+                        width: img.width() as i32,
                     })
-                    .collect();
-
-                for (tempfile, img) in smaller_imgs {
-                    let db_file =
-                        File::create(&db, &state.settings, tempfile, Some("jpg".to_string()))?;
-                    let db_file_id = db_file.id;
-                    created.push(db_file);
-                    diesel::insert_into(GalleryFiles::gallery_files)
-                        .values(&GalleryFile {
-                            item_id: gallery_item.id,
-                            file_id: db_file_id,
-                            height: img.height() as i32,
-                            width: img.width() as i32,
-                        })
-                        .execute(&db)?;
-                }
-                Ok(gallery_item.id)
-            })
-            .map_err(|e| {
-                created.into_iter().for_each(|f| {
-                    f.delete_from_disk(&state.settings);
-                });
-                e
-            })?;
+                    .execute(&db)?;
+            }
+            Ok(gallery_item.id)
+        })
+        .map_err(|e| {
+            created.into_iter().for_each(|f| {
+                f.delete_from_disk(&state.settings);
+            });
+            e
+        })?;
 
         Ok(())
     })
