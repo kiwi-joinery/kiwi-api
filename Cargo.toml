@@ -13,11 +13,12 @@ actix-web-httpauth = "0.4.2"
 actix_validated_forms = { git = "https://github.com/jacob-pro/actix-validated-forms", features = ["derive"] }
 base64 = "0.12.3"
 bcrypt = "0.8"
+bigdecimal = "0.1.2"
 bincode = "1.3.1"
 chrono = "0.4.15"
 clap = "2.33.3"
 config = "0.9"
-diesel = { version = "1.4.5", features = ["postgres", "r2d2", "chrono"] }
+diesel = { version = "1.4.5", features = ["postgres", "r2d2", "chrono", "bigdecimal", "numeric"] }
 diesel_migrations = "1.4.0"
 env_logger = "0.7.1"
 futures = "0.3.1"

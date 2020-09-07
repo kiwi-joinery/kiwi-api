@@ -7,6 +7,7 @@ use crate::schema::*;
 use chrono::offset::Utc;
 use chrono::DateTime;
 
+use bigdecimal::BigDecimal;
 use serde::Serialize;
 
 // https://github.com/diesel-rs/diesel/blob/master/guide_drafts/trait_derives.md#identifiable
@@ -59,7 +60,7 @@ pub struct File {
     pub extension: Option<String>,
 }
 
-#[derive(Queryable, Debug, Identifiable, Insertable, Associations, Serialize)]
+#[derive(Queryable, Debug, Identifiable, Insertable, Associations)]
 #[primary_key(item_id, file_id)]
 #[belongs_to(GalleryItem, foreign_key = "item_id")]
 pub struct GalleryFile {
@@ -69,12 +70,12 @@ pub struct GalleryFile {
     pub width: i32,
 }
 
-#[derive(Queryable, Debug, Identifiable, Associations, Serialize)]
+#[derive(Queryable, Debug, Identifiable, Associations)]
 pub struct GalleryItem {
     pub id: i32,
     pub description: String,
     pub original_file_id: i32,
-    pub position: String,
+    pub position: BigDecimal,
     pub category: String,
 }
 
@@ -82,6 +83,6 @@ pub struct GalleryItem {
 #[table_name = "gallery_items"]
 pub struct GalleryItemChange {
     pub description: String,
-    pub position: Option<String>,
+    pub position: Option<BigDecimal>,
     pub category: String,
 }

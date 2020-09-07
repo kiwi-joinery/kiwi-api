@@ -1,6 +1,5 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
-use crate::ext::ordered_position_strings;
 use crate::models::{File, GalleryFile, GalleryItem, GalleryItemChange};
 use crate::schema::files::dsl as Files;
 use crate::schema::gallery_files::dsl as GalleryFiles;
@@ -13,6 +12,7 @@ use actix_validated_forms::multipart::{
 use actix_validated_forms::tempfile::NamedTempFile;
 use actix_web::web::{Data, Path};
 use actix_web::{web, HttpResponse};
+use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel::Connection;
 use futures::TryFutureExt;
@@ -93,6 +93,7 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 enum Category {
     Staircases,
     Windows,
@@ -139,8 +140,8 @@ pub async fn create_item(
                 .get_result::<GalleryItem>(&db)
                 .optional()?
             {
-                None => ordered_position_strings::first_string(),
-                Some(x) => ordered_position_strings::next_string(x.position.as_str()),
+                None => BigDecimal::from(100),
+                Some(x) => x.position + BigDecimal::from(100),
             };
 
             let gallery_item: GalleryItem = diesel::insert_into(GalleryItems::gallery_items)
@@ -266,11 +267,37 @@ pub async fn update_item(
 ) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
+
+        let new_pos = match form.after_id {
+            None => None,
+            Some(after_id) => {
+                let after: GalleryItem = GalleryItems::gallery_items
+                    .filter(GalleryItems::id.eq(after_id))
+                    .filter(GalleryItems::category.eq(form.category.to_string()))
+                    .get_result::<GalleryItem>(&db)
+                    .optional()?
+                    .ok_or(APIError::BadRequest {
+                        code: "BAD_REQUEST".to_string(),
+                        description: Some("after_id is invalid".to_string()),
+                    })?;
+                let before: Option<GalleryItem> = GalleryItems::gallery_items
+                    .filter(GalleryItems::position.gt(&after.position))
+                    .filter(GalleryItems::category.eq(form.category.to_string()))
+                    .order(GalleryItems::position.asc())
+                    .get_result(&db)
+                    .optional()?;
+                Some(match before {
+                    None => after.position + BigDecimal::from(100),
+                    Some(before) => (after.position + before.position) / BigDecimal::from(2),
+                })
+            }
+        };
+
         let target = GalleryItems::gallery_items.filter(GalleryItems::id.eq(item_id.into_inner()));
         let query = diesel::update(target)
             .set(&GalleryItemChange {
                 description: form.description.clone(),
-                position: None,
+                position: new_pos,
                 category: form.category.to_string(),
             })
             .execute(&db)?;

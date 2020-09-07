@@ -35,7 +35,7 @@ CREATE TABLE gallery_items
     id SERIAL PRIMARY KEY,
     description VARCHAR(4096) NOT NULL,
     original_file_id INT NOT NULL,
-    position VARCHAR UNIQUE NOT NULL,
+    position DECIMAL UNIQUE NOT NULL,
     category VARCHAR(255) CHECK (category IN ('STAIRCASES', 'DOORS', 'WINDOWS', 'OTHER')) NOT NULL,
     FOREIGN KEY (original_file_id) REFERENCES files (id)
 );
