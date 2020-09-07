@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use std::io::BufWriter;
 use std::str::FromStr;
 use url::Url;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 #[derive(Serialize)]
 pub struct GalleryItemResponse {
@@ -253,11 +253,27 @@ pub async fn delete_item(
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_update_gallery_item"))]
 pub struct UpdateGalleryItem {
     #[validate(length(max = 4096))]
     description: String,
     category: Category,
-    after_id: Option<i32>,
+    move_after_id: Option<i32>,
+    #[serde(default = "serde_false")]
+    move_to_front: bool,
+}
+
+fn serde_false() -> bool {
+    false
+}
+
+fn validate_update_gallery_item(x: &UpdateGalleryItem) -> Result<(), ValidationError> {
+    if x.move_after_id.is_some() && x.move_to_front {
+        return Err(ValidationError::new(
+            "Cannot set both move_after_id and move_to_front",
+        ));
+    }
+    Ok(())
 }
 
 pub async fn update_item(
@@ -268,28 +284,38 @@ pub async fn update_item(
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
 
-        let new_pos = match form.after_id {
-            None => None,
-            Some(after_id) => {
-                let after: GalleryItem = GalleryItems::gallery_items
-                    .filter(GalleryItems::id.eq(after_id))
-                    .filter(GalleryItems::category.eq(form.category.to_string()))
-                    .get_result::<GalleryItem>(&db)
-                    .optional()?
-                    .ok_or(APIError::BadRequest {
-                        code: "BAD_REQUEST".to_string(),
-                        description: Some("after_id is invalid".to_string()),
-                    })?;
-                let before: Option<GalleryItem> = GalleryItems::gallery_items
-                    .filter(GalleryItems::position.gt(&after.position))
-                    .filter(GalleryItems::category.eq(form.category.to_string()))
-                    .order(GalleryItems::position.asc())
-                    .get_result(&db)
-                    .optional()?;
-                Some(match before {
-                    None => after.position + BigDecimal::from(100),
-                    Some(before) => (after.position + before.position) / BigDecimal::from(2),
-                })
+        let new_pos = if form.move_to_front {
+            GalleryItems::gallery_items
+                .filter(GalleryItems::category.eq(form.category.to_string()))
+                .limit(1)
+                .order(GalleryItems::position.asc())
+                .get_result::<GalleryItem>(&db)
+                .optional()?
+                .map(|x| (BigDecimal::from(0) + x.position) / 2)
+        } else {
+            match form.move_after_id {
+                None => None,
+                Some(after_id) => {
+                    let after: GalleryItem = GalleryItems::gallery_items
+                        .filter(GalleryItems::id.eq(after_id))
+                        .filter(GalleryItems::category.eq(form.category.to_string()))
+                        .get_result::<GalleryItem>(&db)
+                        .optional()?
+                        .ok_or(APIError::BadRequest {
+                            code: "BAD_REQUEST".to_string(),
+                            description: Some("after_id is invalid".to_string()),
+                        })?;
+                    let before: Option<GalleryItem> = GalleryItems::gallery_items
+                        .filter(GalleryItems::position.gt(&after.position))
+                        .filter(GalleryItems::category.eq(form.category.to_string()))
+                        .order(GalleryItems::position.asc())
+                        .get_result(&db)
+                        .optional()?;
+                    Some(match before {
+                        None => after.position + BigDecimal::from(100),
+                        Some(before) => (after.position + before.position) / BigDecimal::from(2),
+                    })
+                }
             }
         };
 
