@@ -1,12 +1,12 @@
 use itertools::Itertools;
 
 // The position of the first item to be stored
-fn first_string() -> String {
+pub fn first_string() -> String {
     "a".to_string()
 }
 
 // The position of a new item inserted after the last of the list
-fn next_string(x: &str) -> String {
+pub fn next_string(x: &str) -> String {
     assert!(x.chars().all(|x| x.is_ascii_lowercase()));
     let mut base = String::new();
     let mut x = x.chars();
@@ -29,7 +29,7 @@ fn next_string(x: &str) -> String {
 }
 
 // The position of a new item inserted between the list
-fn string_in_between(after: &str, before: &str) -> String {
+pub fn string_in_between(after: &str, before: &str) -> String {
     assert!(after.chars().all(|x| x.is_ascii_lowercase()));
     assert!(before.chars().all(|x| x.is_ascii_lowercase()));
     assert_ne!(after, before);

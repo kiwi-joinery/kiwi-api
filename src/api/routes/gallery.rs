@@ -1,5 +1,6 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
+use crate::ext::ordered_position_strings;
 use crate::models::{File, GalleryFile, GalleryItem, GalleryItemChange};
 use crate::schema::files::dsl as Files;
 use crate::schema::gallery_files::dsl as GalleryFiles;
@@ -132,11 +133,21 @@ pub async fn create_item(
             let original_file_id = original_file.id;
             created.push(original_file);
 
+            let pos = match GalleryItems::gallery_items
+                .order(GalleryItems::position.desc())
+                .limit(1)
+                .get_result::<GalleryItem>(&db)
+                .optional()?
+            {
+                None => ordered_position_strings::first_string(),
+                Some(x) => ordered_position_strings::next_string(x.position.as_str()),
+            };
+
             let gallery_item: GalleryItem = diesel::insert_into(GalleryItems::gallery_items)
                 .values((
                     GalleryItems::description.eq(form.description),
                     GalleryItems::original_file_id.eq(original_file_id),
-                    GalleryItems::position.eq("a"),
+                    GalleryItems::position.eq(pos),
                     GalleryItems::category.eq(form.category.to_string()),
                 ))
                 .get_result(&db)?;
