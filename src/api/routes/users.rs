@@ -104,7 +104,7 @@ fn assert_email_available(db: &Connection, email: &String) -> Result<(), APIErro
     if count > 0 {
         Err(APIError::BadRequest {
             code: "EMAIL_TAKEN".to_owned(),
-            description: None,
+            description: Some("The Email address is already in use".to_string()),
         })
     } else {
         Ok(())
