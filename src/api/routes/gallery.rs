@@ -21,6 +21,7 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::BufWriter;
 use std::str::FromStr;
 use url::Url;
@@ -75,7 +76,14 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
             });
         }
 
-        Ok(grouped_by_image)
+        let mut grouped_by_category = HashMap::new();
+        for (category, group) in &grouped_by_image
+            .into_iter()
+            .group_by(|x| x.category.clone())
+        {
+            grouped_by_category.insert(category, group.collect_vec());
+        }
+        Ok(grouped_by_category)
     })
     .map_ok(ok_json)
     .map_err(APIError::from)
