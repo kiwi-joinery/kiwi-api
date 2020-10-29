@@ -1,0 +1,27 @@
+version: '3.7'
+services:
+  api:
+    build: .
+    volumes:
+      - storage:/kiwi:rw
+    ports:
+      - "9000:9000"
+    environment:
+      - APP.PORT=9000
+      - DATABASE.HOST=postgres
+      - DATABASE.PORT=5432
+      - DATABASE.NAME=postgres
+      - DATABASE.USERNAME=postgres
+      - DATABASE.PASSWORD=Y1C0yDpcG5ofbFO1pS27
+      - RUST_LOG=info
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:12
+    environment:
+      - POSTGRES_PASSWORD=Y1C0yDpcG5ofbFO1pS27
+    volumes:
+      - postgres:/var/lib/postgresql/data:rw
+volumes:
+  storage:
+  postgres:
