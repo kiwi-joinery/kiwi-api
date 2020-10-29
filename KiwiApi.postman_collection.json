@@ -41,12 +41,12 @@
 							"urlencoded": [
 								{
 									"key": "email",
-									"value": "admin@contoso.com",
+									"value": "{{email}}",
 									"type": "text"
 								},
 								{
 									"key": "password",
-									"value": "password",
+									"value": "{{password}}",
 									"type": "text"
 								}
 							]
@@ -86,9 +86,6 @@
 				},
 				{
 					"name": "List Sessions",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
 					"request": {
 						"method": "GET",
 						"header": [
@@ -99,21 +96,6 @@
 								"type": "text"
 							}
 						],
-						"body": {
-							"mode": "urlencoded",
-							"urlencoded": [
-								{
-									"key": "email",
-									"value": "",
-									"type": "text"
-								},
-								{
-									"key": "password",
-									"value": "",
-									"type": "text"
-								}
-							]
-						},
 						"url": {
 							"raw": "{{api_url}}/sessions",
 							"host": [
@@ -161,9 +143,6 @@
 				},
 				{
 					"name": "Nested Not Found",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
 					"request": {
 						"method": "GET",
 						"header": [
@@ -174,21 +153,6 @@
 								"type": "text"
 							}
 						],
-						"body": {
-							"mode": "urlencoded",
-							"urlencoded": [
-								{
-									"key": "email",
-									"value": "",
-									"type": "text"
-								},
-								{
-									"key": "password",
-									"value": "",
-									"type": "text"
-								}
-							]
-						},
 						"url": {
 							"raw": "{{api_url}}/session/doesnt_exist",
 							"host": [
@@ -215,21 +179,6 @@
 								"value": "application/x-www-form-urlencoded"
 							}
 						],
-						"body": {
-							"mode": "urlencoded",
-							"urlencoded": [
-								{
-									"key": "email",
-									"value": "",
-									"type": "text"
-								},
-								{
-									"key": "password",
-									"value": "",
-									"type": "text"
-								}
-							]
-						},
 						"url": {
 							"raw": "{{api_url}}/sessions",
 							"host": [
@@ -309,17 +258,7 @@
 									"type": "text"
 								},
 								{
-									"key": "password",
-									"value": "",
-									"type": "text"
-								},
-								{
 									"key": "name",
-									"value": "",
-									"type": "text"
-								},
-								{
-									"key": "is_admin",
 									"value": "",
 									"type": "text"
 								}
@@ -435,7 +374,7 @@
 							"urlencoded": [
 								{
 									"key": "email",
-									"value": "jacob@jhalsey.com",
+									"value": "{{email}}",
 									"type": "text"
 								}
 							]
@@ -470,17 +409,17 @@
 							"urlencoded": [
 								{
 									"key": "token",
-									"value": "a",
+									"value": "",
 									"type": "text"
 								},
 								{
 									"key": "new_password",
-									"value": "password",
+									"value": "",
 									"type": "text"
 								},
 								{
 									"key": "email",
-									"value": "a",
+									"value": "{{email}}",
 									"type": "text"
 								}
 							]
@@ -526,7 +465,7 @@
 								},
 								{
 									"key": "email",
-									"value": "jacob@jhalsey.com",
+									"value": "{{email}}",
 									"type": "text"
 								},
 								{
@@ -593,32 +532,9 @@
 				},
 				{
 					"name": "List Gallery",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
 					"request": {
 						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "description",
-									"value": "Wallpaper",
-									"type": "text"
-								},
-								{
-									"key": "category",
-									"value": "STAIRCASES",
-									"type": "text"
-								},
-								{
-									"key": "image",
-									"type": "file",
-									"src": "/C:/Users/jacob/Pictures/Windows 8 Wallpaper.jpg"
-								}
-							]
-						},
 						"url": {
 							"raw": "{{api_url}}/gallery/list",
 							"host": [
