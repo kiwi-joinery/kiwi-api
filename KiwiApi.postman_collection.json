@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "d90e732d-b105-491e-8260-3cf7b2155875",
+		"_postman_id": "c6fb2f6f-b846-4b9c-9efc-c87c871b7744",
 		"name": "KiwiApi",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -14,7 +14,7 @@
 						{
 							"listen": "test",
 							"script": {
-								"id": "89dee1a5-ca20-43c5-81bc-b9819affe089",
+								"id": "fda05f71-0279-4e17-9947-828e7a45885a",
 								"exec": [
 									"var json = JSON.parse(responseBody);",
 									"if (pm.response.code == 200) {",
@@ -133,7 +133,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "c3a1ddf6-df42-4313-ba8f-66c3ffc83e04",
+								"id": "87e3edba-4e77-4057-8ec2-433b9f88b531",
 								"exec": [
 									"pm.variables.set(\"id\", \"1\");\r",
 									""
@@ -248,7 +248,7 @@
 				{
 					"listen": "prerequest",
 					"script": {
-						"id": "375dd9e3-d502-475f-9f8d-fa26fef0d278",
+						"id": "e9f2442b-3e2c-4fa7-9484-f9903e957878",
 						"type": "text/javascript",
 						"exec": [
 							""
@@ -258,7 +258,7 @@
 				{
 					"listen": "test",
 					"script": {
-						"id": "d8624e13-de20-4c0b-a6a1-35eb65a9cb01",
+						"id": "6f955449-9d27-4896-8293-ff14b8afff72",
 						"type": "text/javascript",
 						"exec": [
 							""
@@ -343,7 +343,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "c850746c-2c3a-42e3-a706-deca4f11ed31",
+								"id": "01163432-8152-4926-bd35-d5817896f153",
 								"exec": [
 									"pm.variables.set(\"id\", \"1\");"
 								],
@@ -395,7 +395,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "ed4808d7-2585-4608-99c7-a678441c5043",
+								"id": "f2b1d71f-d863-4d85-8971-779fc26bab79",
 								"exec": [
 									"pm.variables.set(\"id\", \"1\");"
 								],
@@ -638,7 +638,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "4bebe8c9-2f4e-45e8-983b-2f75095caaa6",
+								"id": "e51a0459-997a-4d2b-a49f-bb8abb91f836",
 								"exec": [
 									"pm.variables.set(\"id\", \"3\");"
 								],
@@ -668,7 +668,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "7110e7d3-ab25-4ad0-b50d-2fd4bd1b8254",
+								"id": "fb163006-6ef4-43aa-ac1a-b0b407cb54ff",
 								"exec": [
 									"pm.variables.set(\"id\", \"1\");"
 								],
@@ -740,7 +740,7 @@
 				{
 					"listen": "test",
 					"script": {
-						"id": "b2ab63dd-7930-4e65-9dc8-4c3e681908de",
+						"id": "f900c6c9-22a6-447c-8577-8462a5efebb3",
 						"exec": [
 							"var schema = {",
 							"  \"items\": {",
@@ -796,7 +796,7 @@
 		{
 			"listen": "prerequest",
 			"script": {
-				"id": "854eb82b-2204-46c9-a3e3-2260b1122432",
+				"id": "b38eeb79-5176-46de-9004-dddc0bb2792a",
 				"type": "text/javascript",
 				"exec": [
 					""
@@ -806,7 +806,7 @@
 		{
 			"listen": "test",
 			"script": {
-				"id": "827d9451-7de8-47b0-9711-e03cc9492f86",
+				"id": "9a83ece9-89aa-45d5-9552-22310bd56ecc",
 				"type": "text/javascript",
 				"exec": [
 					""

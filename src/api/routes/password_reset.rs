@@ -102,7 +102,7 @@ pub async fn submit(
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
 
-        let user: User = match U::users
+        let mut user: User = match U::users
             .filter(U::email.eq(&form.email))
             .filter(U::password_reset_token.eq(&form.token))
             .first::<User>(&db)
@@ -113,11 +113,12 @@ pub async fn submit(
         };
 
         let new = hash(&form.new_password, DEFAULT_COST)?;
+        user.password_hash = Some(new);
+        user.password_reset_token = None;
 
         diesel::update(&user)
-            .set(U::password_hash.eq(&new))
+            .set(&user)
             .execute(&db)?;
-
         Ok(())
     })
     .map_ok(ok_json)

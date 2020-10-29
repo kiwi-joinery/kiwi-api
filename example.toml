@@ -1,12 +1,19 @@
 [app]
 port = 9000
-storage = "/storage"
+storage_folder = "/storage"
+contact_mailbox = "destination"
+password_reset_url = "https://admin.kiwijoinerydevon.co.uk/password_reset"
+api_url = "http://localhost:9000"
 
 [database]
 host = "localhost"
 port = 5432
 username = "username"
 password = "password"
-database = "kiwi"
+name = "kiwi"
 
 [mailer]
+host = "mail.contoso.com"
+port = 587
+email = "email@contoso.com"
+password = "password"
