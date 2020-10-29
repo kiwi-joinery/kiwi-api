@@ -2,6 +2,7 @@ use crate::api::errors::APIError;
 use crate::api::ok_json;
 use crate::api::routes::session::AUTH_TOKEN_BYTES;
 use crate::api::token::generate_token;
+use crate::ext::postgres::functions::*;
 use crate::models::User;
 use crate::schema::users::dsl as U;
 use crate::state::AppState;
@@ -54,7 +55,7 @@ pub async fn request(
         let db = state.new_connection();
 
         let user: User = match U::users
-            .filter(U::email.eq(&email.email))
+            .filter(lower(U::email).eq(&email.email.to_ascii_lowercase()))
             .first::<User>(&db)
             .optional()?
         {
@@ -103,7 +104,7 @@ pub async fn submit(
         let db = state.new_connection();
 
         let mut user: User = match U::users
-            .filter(U::email.eq(&form.email))
+            .filter(lower(U::email).eq(&form.email.to_ascii_lowercase()))
             .filter(U::password_reset_token.eq(&form.token))
             .first::<User>(&db)
             .optional()?
@@ -116,9 +117,7 @@ pub async fn submit(
         user.password_hash = Some(new);
         user.password_reset_token = None;
 
-        diesel::update(&user)
-            .set(&user)
-            .execute(&db)?;
+        diesel::update(&user).set(&user).execute(&db)?;
         Ok(())
     })
     .map_ok(ok_json)

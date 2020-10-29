@@ -4,6 +4,7 @@ use crate::api::errors::APIError;
 use crate::api::ok_json;
 use crate::api::routes::users::UserResponseItem;
 use crate::api::token::generate_token;
+use crate::ext::postgres::functions::*;
 use crate::models::{NewSession, Session, User};
 use crate::schema::sessions::dsl as S;
 use crate::schema::users::dsl as U;
@@ -49,7 +50,7 @@ pub async fn password_login(
 
         //Fetch the user with the submitted email
         let user: User = match U::users
-            .filter(U::email.eq(&form.email))
+            .filter(lower(U::email).eq(&form.email.to_ascii_lowercase()))
             .first::<User>(&db)
             .optional()?
         {

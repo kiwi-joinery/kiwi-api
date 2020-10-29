@@ -5,6 +5,7 @@ use crate::api::routes::password_reset::send_reset_email;
 use crate::api::routes::session::AUTH_TOKEN_BYTES;
 use crate::api::token::generate_token;
 use crate::ext::postgres::functions::strpos;
+use crate::ext::postgres::functions::*;
 use crate::ext::postgres::limit::{CountedLimitResult, CountingLimit};
 use crate::models::{NewUser, User};
 use crate::schema::users::dsl as U;
@@ -98,7 +99,7 @@ pub struct CreateUserForm {
 
 fn assert_email_available(db: &Connection, email: &String) -> Result<(), APIError> {
     let count = U::users
-        .filter(U::email.eq(email))
+        .filter(lower(U::email).eq(email.to_ascii_lowercase()))
         .count()
         .get_result::<i64>(db)?;
     if count > 0 {
@@ -123,7 +124,7 @@ pub async fn create(
         let reset = generate_token(AUTH_TOKEN_BYTES);
         let insert = NewUser {
             name: form.name.clone(),
-            email: form.email.clone(),
+            email: form.email.clone().to_ascii_lowercase(),
             password_hash: None,
             password_reset_token: Some(reset.clone()),
         };
@@ -199,9 +200,10 @@ pub async fn update(
         }
         match &form.email {
             Some(e) => {
-                if e != &user.email {
+                let e = e.to_ascii_lowercase();
+                if e.as_str() != &user.email.to_ascii_lowercase() {
                     assert_email_available(&db, &e)?;
-                    user.email = e.to_owned();
+                    user.email = e;
                 }
             }
             _ => {}
