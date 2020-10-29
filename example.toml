@@ -1,6 +1,6 @@
 [app]
 port = 9000
-storage_folder = "/storage"
+storage_folder = "./storage"
 contact_mailbox = "destination"
 password_reset_url = "https://admin.kiwijoinerydevon.co.uk/password_reset"
 api_url = "http://localhost:9000"

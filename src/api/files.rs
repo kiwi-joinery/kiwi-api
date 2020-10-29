@@ -53,7 +53,7 @@ impl File {
             .to_path_buf();
         new_name.push(f.id.to_string());
         extension.map(|e| new_name.set_extension(e));
-        input.persist_noclobber(&new_name).unwrap();
+        std::fs::copy(input.path(), &new_name).expect("Failed to copy file");
         Ok(f)
     }
 
