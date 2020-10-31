@@ -36,9 +36,10 @@ CREATE TABLE gallery_items
     created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     description VARCHAR(4096) NOT NULL,
     original_file_id INT NOT NULL,
-    position DECIMAL UNIQUE NOT NULL,
+    position DECIMAL NOT NULL,
     category VARCHAR(255) CHECK (category IN ('STAIRCASES', 'DOORS', 'WINDOWS', 'OTHER')) NOT NULL,
-    FOREIGN KEY (original_file_id) REFERENCES files (id)
+    FOREIGN KEY (original_file_id) REFERENCES files (id),
+    UNIQUE (position, category),
 );
 
 CREATE TABLE gallery_files
