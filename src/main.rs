@@ -15,6 +15,7 @@ embed_migrations!();
 #[macro_use]
 extern crate actix_validated_forms;
 
+use actix_cors::Cors;
 use actix_web::{middleware, App, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -57,9 +58,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let address = format!("0.0.0.0:{}", state.settings.app.port);
     println!("Starting server on port {}", state.settings.app.port);
     HttpServer::new(move || {
+        let cors = Cors::new()
+            .allowed_origin("https://www.kiwijoinerydevon.co.uk")
+            .allowed_origin("https://admin.kiwijoinerydevon.co.uk")
+            .allowed_origin("https://kiwijoinerydevon.co.uk")
+            .max_age(3600)
+            .finish();
         App::new()
             .data(state.clone())
             .wrap(middleware::Logger::default())
+            .wrap(cors)
             .configure(|c| api::configure(c, state.clone()))
     })
     .bind(address)?

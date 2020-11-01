@@ -5,6 +5,7 @@ authors = ["Jacob Halsey <jacob@jhalsey.com>"]
 edition = "2018"
 
 [dependencies]
+actix-cors = "0.2.0"
 actix-files = "0.2.2"
 actix-ratelimit = "0.2.1"
 actix-rt = "1.0"
