@@ -13,6 +13,7 @@ use actix_web::{web, HttpResponse};
 use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel::Connection;
+use enum_iterator::IntoEnumIterator;
 use futures::TryFutureExt;
 use image::imageops::FilterType;
 use image::jpeg::JpegEncoder;
@@ -26,11 +27,20 @@ use std::str::FromStr;
 use url::Url;
 use validator::{Validate, ValidationError};
 
+#[derive(Debug, Serialize, Deserialize, IntoEnumIterator, PartialEq, Eq, Hash)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum Category {
+    Staircases,
+    Windows,
+    Doors,
+    Other,
+}
+
 #[derive(Serialize)]
 pub struct GalleryItemResponse {
     pub id: i32,
     pub description: String,
-    pub category: String,
+    pub category: Category,
     pub files: Vec<GalleryFileResponse>,
 }
 
@@ -51,6 +61,7 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
             .order((GalleryItems::position.asc(), GalleryFiles::width.asc()))
             .get_results(&db)?;
 
+        // Be careful group by behaviour is weird, but will work here because of ordering
         let mut grouped_by_image = Vec::new();
         for (_, group) in &items.into_iter().group_by(|x| x.0.id) {
             let mut files = Vec::new();
@@ -70,17 +81,17 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
             grouped_by_image.push(GalleryItemResponse {
                 id: first.id,
                 description: first.description.clone(),
-                category: first.category.clone(),
+                category: first.category.parse().unwrap(),
                 files,
             });
         }
 
         let mut grouped_by_category = HashMap::new();
-        for (category, group) in &grouped_by_image
-            .into_iter()
-            .group_by(|x| x.category.clone())
-        {
-            grouped_by_category.insert(category, group.collect_vec());
+        for i in Category::into_enum_iter() {
+            grouped_by_category.insert(i, Vec::new());
+        }
+        for i in grouped_by_image.into_iter() {
+            grouped_by_category.get_mut(&i.category).unwrap().push(i);
         }
         Ok(grouped_by_category)
     })
@@ -116,22 +127,13 @@ pub async fn get_item(item_id: Path<i32>, state: Data<AppState>) -> Result<HttpR
         Ok(GalleryItemResponse {
             id: first.id,
             description: first.description,
-            category: first.category,
+            category: first.category.parse().unwrap(),
             files,
         })
     })
     .map_ok(ok_json)
     .err_into()
     .await
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
-enum Category {
-    Staircases,
-    Windows,
-    Doors,
-    Other,
 }
 
 #[derive(Debug, FromMultipart, Validate)]

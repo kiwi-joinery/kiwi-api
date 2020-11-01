@@ -10,7 +10,7 @@ else
   CARGO=cargo
 fi
 
-
+set -e
 REGISTRY=registry.jhalsey.com
 TAG=$REGISTRY/kiwi-api:latest
 $CARGO clean
