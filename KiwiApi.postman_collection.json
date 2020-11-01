@@ -549,6 +549,36 @@
 					"response": []
 				},
 				{
+					"name": "Get gallery item",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "c5c04fbd-c0c7-4bef-8aea-df2d12d20d96",
+								"exec": [
+									"pm.variables.set(\"id\", \"1\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/gallery/{{id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"gallery",
+								"{{id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Delete Gallery Item",
 					"event": [
 						{

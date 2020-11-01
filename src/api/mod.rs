@@ -124,6 +124,7 @@ pub fn configure(cfg: &mut web::ServiceConfig, state: AppState) {
                             )
                             .service(
                                 resource("{item_id}")
+                                    .route(web::get().to(routes::gallery::get_item))
                                     .route(web::put().to(routes::gallery::update_item))
                                     .route(web::delete().to(routes::gallery::delete_item)),
                             )

@@ -19,7 +19,6 @@ use image::jpeg::JpegEncoder;
 use image::{DynamicImage, GenericImageView};
 use itertools::Itertools;
 use rayon::prelude::*;
-use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::BufWriter;
@@ -90,6 +89,42 @@ pub async fn list(state: Data<AppState>) -> Result<HttpResponse, APIError> {
     .await
 }
 
+pub async fn get_item(item_id: Path<i32>, state: Data<AppState>) -> Result<HttpResponse, APIError> {
+    web::block(move || -> Result<_, APIError> {
+        let db = state.new_connection();
+        let mut items: Vec<(GalleryItem, Option<(GalleryFile, File)>)> =
+            GalleryItems::gallery_items
+                .left_join(GalleryFiles::gallery_files.inner_join(Files::files))
+                .filter(GalleryItems::id.eq(item_id.into_inner()))
+                .get_results(&db)?;
+        if items.len() < 1 {
+            return Err(APIError::NotFound);
+        }
+        let mut files = Vec::new();
+        for (_, f) in &items {
+            match f {
+                None => {}
+                Some((g, f)) => files.push(GalleryFileResponse {
+                    url: f.get_public_url(&state.settings),
+                    height: g.height,
+                    width: g.width,
+                    bytes: f.bytes,
+                }),
+            }
+        }
+        let first = items.remove(0).0;
+        Ok(GalleryItemResponse {
+            id: first.id,
+            description: first.description,
+            category: first.category,
+            files,
+        })
+    })
+    .map_ok(ok_json)
+    .err_into()
+    .await
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 enum Category {
@@ -147,7 +182,7 @@ pub async fn create_item(
                     GalleryItems::description.eq(form.description),
                     GalleryItems::original_file_id.eq(original_file_id),
                     GalleryItems::position.eq(pos),
-                    GalleryItems::category.eq(form.category.to_string()),
+                    GalleryItems::category.eq(form.category.serialize()),
                 ))
                 .get_result(&db)?;
 
@@ -284,7 +319,7 @@ pub async fn update_item(
 
         let new_pos = if form.move_to_front {
             GalleryItems::gallery_items
-                .filter(GalleryItems::category.eq(form.category.to_string()))
+                .filter(GalleryItems::category.eq(form.category.serialize()))
                 .limit(1)
                 .order(GalleryItems::position.asc())
                 .get_result::<GalleryItem>(&db)
@@ -296,7 +331,7 @@ pub async fn update_item(
                 Some(after_id) => {
                     let after: GalleryItem = GalleryItems::gallery_items
                         .filter(GalleryItems::id.eq(after_id))
-                        .filter(GalleryItems::category.eq(form.category.to_string()))
+                        .filter(GalleryItems::category.eq(form.category.serialize()))
                         .get_result::<GalleryItem>(&db)
                         .optional()?
                         .ok_or(APIError::BadRequest {
@@ -305,7 +340,7 @@ pub async fn update_item(
                         })?;
                     let before: Option<GalleryItem> = GalleryItems::gallery_items
                         .filter(GalleryItems::position.gt(&after.position))
-                        .filter(GalleryItems::category.eq(form.category.to_string()))
+                        .filter(GalleryItems::category.eq(form.category.serialize()))
                         .order(GalleryItems::position.asc())
                         .get_result(&db)
                         .optional()?;
@@ -322,7 +357,7 @@ pub async fn update_item(
             .set(&GalleryItemChange {
                 description: form.description.clone(),
                 position: new_pos,
-                category: form.category.to_string(),
+                category: form.category.serialize(),
             })
             .execute(&db)?;
         if query < 1 {
@@ -338,23 +373,12 @@ pub async fn update_item(
 impl FromStr for Category {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "STAIRCASES" => Ok(Self::Staircases),
-            "WINDOWS" => Ok(Self::Windows),
-            "DOORS" => Ok(Self::Doors),
-            "OTHER" => Ok(Self::Other),
-            _ => Err(()),
-        }
+        serde_plain::from_str::<Self>(s).map_err(|_| ())
     }
 }
 
-impl std::fmt::Display for Category {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Category::Staircases => f.write_str("STAIRCASES"),
-            Category::Windows => f.write_str("WINDOWS"),
-            Category::Doors => f.write_str("DOORS"),
-            Category::Other => f.write_str("OTHER"),
-        }
+impl Category {
+    fn serialize(&self) -> String {
+        serde_plain::to_string(&self).unwrap()
     }
 }
