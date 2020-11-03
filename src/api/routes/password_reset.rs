@@ -92,7 +92,7 @@ pub async fn request(
 pub struct ResetSubmit {
     token: String,
     email: String,
-    #[validate(length(min = 8, max = 255))]
+    #[validate(length(min = 16, max = 255))]
     new_password: String,
 }
 
