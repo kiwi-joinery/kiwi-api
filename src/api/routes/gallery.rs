@@ -1,5 +1,6 @@
 use crate::api::errors::APIError;
 use crate::api::ok_json;
+use crate::ext::image_exif::read_image;
 use crate::models::{File, GalleryFile, GalleryItem, GalleryItemChange};
 use crate::schema::files::dsl as Files;
 use crate::schema::gallery_files::dsl as GalleryFiles;
@@ -156,7 +157,7 @@ pub async fn create_item(
         // Check uploaded file is valid image
         let form = form.into_inner();
         let img_bytes = std::fs::read(form.image.file.path()).unwrap();
-        let img = image::load_from_memory(&img_bytes).map_err(|_| APIError::BadRequest {
+        let img = read_image(&img_bytes).map_err(|_| APIError::BadRequest {
             code: "BAD_IMAGE".to_string(),
             description: Some("The image file was not valid".to_string()),
         })?;
