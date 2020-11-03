@@ -319,8 +319,12 @@ pub async fn update_item(
 ) -> Result<HttpResponse, APIError> {
     web::block(move || -> Result<_, APIError> {
         let db = state.new_connection();
+        let target: GalleryItem = GalleryItems::gallery_items
+            .find(item_id.into_inner())
+            .get_result(&db)?;
 
         let new_pos = if form.move_to_front {
+            // Insert halfway between 0 and the first current position
             GalleryItems::gallery_items
                 .filter(GalleryItems::category.eq(form.category.serialize()))
                 .limit(1)
@@ -328,35 +332,46 @@ pub async fn update_item(
                 .get_result::<GalleryItem>(&db)
                 .optional()?
                 .map(|x| (BigDecimal::from(0) + x.position) / BigDecimal::from(2))
+        } else if let Some(after_id) = form.move_after_id {
+            // Find the position of the item it is being inserted after
+            let after: GalleryItem = GalleryItems::gallery_items
+                .filter(GalleryItems::id.eq(after_id))
+                .filter(GalleryItems::category.eq(form.category.serialize()))
+                .get_result::<GalleryItem>(&db)
+                .optional()?
+                .ok_or(APIError::BadRequest {
+                    code: "BAD_REQUEST".to_string(),
+                    description: Some("after_id is invalid".to_string()),
+                })?;
+            // Find the position of the item it is being inserted before
+            let before: Option<GalleryItem> = GalleryItems::gallery_items
+                .filter(GalleryItems::position.gt(&after.position))
+                .filter(GalleryItems::category.eq(form.category.serialize()))
+                .order(GalleryItems::position.asc())
+                .get_result(&db)
+                .optional()?;
+            Some(match before {
+                None => after.position + BigDecimal::from(100),
+                Some(before) => (after.position + before.position) / BigDecimal::from(2),
+            })
+        } else if target.category != form.category.serialize() {
+            // If the category is being changed, then insert after the last current position
+            Some(
+                GalleryItems::gallery_items
+                    .filter(GalleryItems::category.eq(form.category.serialize()))
+                    .limit(1)
+                    .order(GalleryItems::position.desc())
+                    .get_result::<GalleryItem>(&db)
+                    .optional()?
+                    .map(|x| x.position + BigDecimal::from(100))
+                    .unwrap_or(BigDecimal::from(100)),
+            )
         } else {
-            match form.move_after_id {
-                None => None,
-                Some(after_id) => {
-                    let after: GalleryItem = GalleryItems::gallery_items
-                        .filter(GalleryItems::id.eq(after_id))
-                        .filter(GalleryItems::category.eq(form.category.serialize()))
-                        .get_result::<GalleryItem>(&db)
-                        .optional()?
-                        .ok_or(APIError::BadRequest {
-                            code: "BAD_REQUEST".to_string(),
-                            description: Some("after_id is invalid".to_string()),
-                        })?;
-                    let before: Option<GalleryItem> = GalleryItems::gallery_items
-                        .filter(GalleryItems::position.gt(&after.position))
-                        .filter(GalleryItems::category.eq(form.category.serialize()))
-                        .order(GalleryItems::position.asc())
-                        .get_result(&db)
-                        .optional()?;
-                    Some(match before {
-                        None => after.position + BigDecimal::from(100),
-                        Some(before) => (after.position + before.position) / BigDecimal::from(2),
-                    })
-                }
-            }
+            // Item is not changing position or category
+            None
         };
 
-        let target = GalleryItems::gallery_items.filter(GalleryItems::id.eq(item_id.into_inner()));
-        let query = diesel::update(target)
+        let query = diesel::update(&target)
             .set(&GalleryItemChange {
                 description: form.description.clone(),
                 position: new_pos,
