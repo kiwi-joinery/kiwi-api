@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .allowed_origin("https://www.kiwijoinerydevon.co.uk")
             .allowed_origin("https://admin.kiwijoinerydevon.co.uk")
             .allowed_origin("https://kiwijoinerydevon.co.uk")
-            .allowed_origin("https://kiwi-joinery.github.io/")
+            .allowed_origin("https://kiwi-joinery.github.io")
             .max_age(3600)
             .finish();
         App::new()
