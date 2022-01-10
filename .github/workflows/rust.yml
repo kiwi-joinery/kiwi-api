@@ -5,6 +5,7 @@ on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
   IMAGE_NAME: kiwi-api
+  ORG_NAME: kiwi-joinery
 
 jobs:
   build:
@@ -60,4 +61,5 @@ jobs:
           cut-off: 12 hours ago UTC
           untagged-only: true
           account-type: org
+          org-name: ${{ env.ORG_NAME }}
           token: ${{ secrets.PACKAGE_PAT }}
