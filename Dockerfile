@@ -1,12 +1,6 @@
 FROM rust:latest AS build
 WORKDIR /build/
-# Cache the dependencies specified in Cargo.toml
-RUN env USER=root cargo init . --name temp
-COPY Cargo.toml .
-RUN cargo check --release
-# Do the real build
-COPY ./src ./src
-COPY ./migrations ./migrations
+COPY ./ ./
 RUN cargo build --release
 
 FROM ubuntu:latest
